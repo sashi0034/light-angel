@@ -34,6 +34,7 @@ endfunction()
 add_subdirectory(src/fmt EXCLUDE_FROM_ALL)
 
 add_library(light_angel_core
+  include/light_angel/hello.hpp
   src/hello.cpp
 )
 
