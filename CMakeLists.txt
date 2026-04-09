@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(light_angel VERSION 0.1.0 LANGUAGES CXX)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -50,13 +52,4 @@ target_link_libraries(light_angel_core
 
 light_angel_enable_warnings(light_angel_core)
 
-add_executable(light_angel
-  src/main.cpp
-)
-
-target_link_libraries(light_angel
-  PRIVATE
-    light_angel_core
-)
-
-light_angel_enable_warnings(light_angel)
+add_subdirectory(test)
