@@ -24,6 +24,13 @@ namespace light_angel
             return m_source[m_offset];
         }
 
+        char_t peekAt(uint32_t relativeOffset) const
+        {
+            const uint32_t pos = m_offset + relativeOffset;
+            if (pos >= m_source.size()) return '\0';
+            return m_source[pos];
+        }
+
         bool isEnd() const
         {
             return m_offset >= m_source.size();
