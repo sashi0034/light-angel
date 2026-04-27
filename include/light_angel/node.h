@@ -202,7 +202,7 @@ namespace light_angel
         {
         }
 
-        TokenView identifier;
+        std::vector<TokenView> identifiers;
         std::unique_ptr<Node_Script> script;
     };
 
