@@ -2,22 +2,20 @@
 #include "lexer.h"
 #include "light_angel/token.h"
 
-#include <string_view>
-
 namespace light_angel
 {
     struct ParserContext
     {
-        std::string_view source;
+        str_view source;
 
         LexerState lexer;
 
-        explicit ParserContext(std::string_view source) noexcept
+        explicit ParserContext(str_view source) noexcept
             : source(source), lexer(LexerState(source))
         {
         }
 
-        std::string_view slice(SourceSpan span) const
+        str_view slice(SourceSpan span) const
         {
             return source.substr(span.offset, span.length);
         }

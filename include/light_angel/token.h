@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cstdint>
-#include <string>
+
+#include "string_type.h"
 
 namespace light_angel
 {
@@ -27,7 +28,7 @@ namespace light_angel
         SourceSpan m_span{};
 
 #if defined(LIGHT_ANGEL_DEBUG)
-        std::string m_text;
+        str_t m_text;
 #endif
     };
 
