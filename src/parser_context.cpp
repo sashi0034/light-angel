@@ -4,7 +4,9 @@ namespace
 {
     using namespace light_angel;
 
-    ParserContext g_activeContext{};
+    constexpr std::string_view emptySource{};
+
+    ParserContext g_activeContext{ParserContext(emptySource)};
 } // namespace
 
 namespace light_angel

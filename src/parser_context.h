@@ -9,8 +9,13 @@ namespace light_angel
     struct ParserContext
     {
         std::string_view source;
-        
+
         LexerState lexer;
+
+        explicit ParserContext(std::string_view source) noexcept
+            : source(source), lexer(LexerState(source))
+        {
+        }
 
         std::string_view slice(SourceSpan span) const
         {

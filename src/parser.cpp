@@ -4,13 +4,18 @@
 
 namespace
 {
+    using namespace light_angel;
+
     // forward declarations
-    std::unique_ptr<light_angel::ParserContext> parseScript(light_angel::ParserContext& ctx, char storKeyword = 0);
+    std::unique_ptr<ParserContext> parseScript(ParserContext& ctx, char storKeyword = 0);
 
     // -----------------------------------------------
 
     // **BNF** SCRIPT ::= {IMPORT | ENUM | TYPEDEF | CLASS | INTERFACE | FUNCDEF | VIRTUALPROP | VAR | FUNC | NAMESPACE | USING | ';'}
-    // TODO
+    std::unique_ptr<ParserContext> parseScript(ParserContext& ctx, char storKeyword)
+    {
+        return {};
+    }
 
     // **BNF** NAMESPACE ::= 'namespace' IDENTIFIER {'::' IDENTIFIER} '{' SCRIPT '}'
     // TODO
