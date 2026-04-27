@@ -1,6 +1,6 @@
 ﻿#include "light_angel/token.h"
 
-#include "parser_internal.h"
+#include "parser_context.h"
 
 namespace light_angel
 {

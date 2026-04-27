@@ -41,9 +41,11 @@ add_library(light_angel_core
         include/light_angel/token.h
         src/node.cpp
         src/parser.cpp
-        src/parser_internal.cpp
-        src/parser_internal.h
+        src/parser_context.cpp
+        src/parser_context.h
         src/token.cpp
+        src/lexer.h
+        src/lexer.cpp
 )
 
 target_include_directories(light_angel_core
