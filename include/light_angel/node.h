@@ -89,7 +89,7 @@ namespace light_angel
         InitList,
         Scope,
         DataType,
-        Statement, // list node
+        Statement, // variant node
         Switch,
         Break,
         For,
@@ -104,6 +104,7 @@ namespace light_angel
         Case,
         Expr,
         ExprTerm,
+        ExprValue, // variant node
         ConstructorCall,
         ExprPostOp,
         Cast,
@@ -425,6 +426,9 @@ namespace light_angel
         std::unique_ptr<Node_Expr> defaultExpr; // null = no default value
     };
 
+    // **BNF** TYPEMODIFIER ::= ['&' ['in' | 'out' | 'inout'] ['+'] ['if_handle_then_const']]
+    // n/a
+
     // **BNF** TYPE ::= ['const'] SCOPE DATATYPE ['<' TYPE {',' TYPE} '>'] { ('[' ']') | ('@' ['const']) }
     struct Node_Type final : NodeBase
     {
@@ -483,7 +487,10 @@ namespace light_angel
     };
 
     // **BNF** PRIMITIVETYPE ::= 'void' | 'int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64' | 'float' | 'double' | 'bool'
-    // (PRIMITIVETYPE is discriminated at token level; no dedicated node struct)
+    // n/a
+
+    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
+    // n/a
 
     // **BNF** STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
     struct Node_Statement final : NodeBase
@@ -631,16 +638,20 @@ namespace light_angel
 
         Form form = Form::ExprValueForm;
 
-        // --- InitListForm ---
         std::unique_ptr<Node_Type> initType; // null = bare INITLIST
         std::unique_ptr<Node_InitList> initList;
 
-        // --- ExprValueForm ---
-        // **BNF** EXPRPREOP ::= '-' | '+' | '!' | '++' | '--' | '~' | '@'
-        std::vector<TokenView> preOps;
-        // **BNF** EXPRVALUE ::= 'void' | CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
+        std::vector<TokenView> preOps; // '-' | '+' | '!' | '++' | '--' | '~' | '@'
         std::unique_ptr<NodeBase> exprValue;
         std::vector<std::unique_ptr<Node_ExprPostOp>> postOps;
+    };
+
+    // **BNF** EXPRVALUE ::= 'void' | CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
+    struct Node_ExprValue final : NodeBase
+    {
+        explicit Node_ExprValue(SourceSpan span = {}) : NodeBase(NodeKind::ExprValue, span) {}
+
+        std::unique_ptr<NodeBase> value;
     };
 
     // **BNF** CONSTRUCTORCALL ::= TYPE ARGLIST
@@ -653,7 +664,7 @@ namespace light_angel
     };
 
     // **BNF** EXPRPREOP ::= '-' | '+' | '!' | '++' | '--' | '~' | '@'
-    // (EXPRPREOP is represented as a TokenView list inside Node_ExprTerm)
+    // n/a
 
     // **BNF** EXPRPOSTOP ::= ('.' (FUNCCALL | IDENTIFIER)) | ('[' [IDENTIFIER ':'] ASSIGN {',' [IDENTIFIER ':'] ASSIGN} ']') | ARGLIST | '++' | '--'
     struct Node_ExprPostOp final : NodeBase
