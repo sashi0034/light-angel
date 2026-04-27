@@ -84,7 +84,7 @@ ContinuationIndentWidth: 4
 IndentCaseBlocks: true
 IndentCaseLabels: false
 IndentExternBlock: NoIndent
-NamespaceIndentation: Inner
+NamespaceIndentation: All
 IndentGotoLabels: false
 IndentPPDirectives: AfterHash
 IndentWrappedFunctionNames: true

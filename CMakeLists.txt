@@ -9,45 +9,56 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE
-      RelWithDebInfo
-      CACHE STRING "Build type"
-      FORCE)
-endif()
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE
+            RelWithDebInfo
+            CACHE STRING "Build type"
+            FORCE)
+endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 function(light_angel_enable_warnings target_name)
-  if(MSVC)
-    target_compile_options(${target_name} PRIVATE /W4 /permissive-)
-  else()
-    target_compile_options(
-      ${target_name}
-      PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wconversion
-        -Wsign-conversion)
-  endif()
+    if (MSVC)
+        target_compile_options(${target_name} PRIVATE /W4 /permissive-)
+    else ()
+        target_compile_options(
+                ${target_name}
+                PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion)
+    endif ()
 endfunction()
 
 add_subdirectory(src/fmt EXCLUDE_FROM_ALL)
 
 add_library(light_angel_core
-  include/light_angel/hello.hpp
-  src/hello.cpp
+        include/light_angel/node.h
+        include/light_angel/parser.h
+        include/light_angel/token.h
+        src/node.cpp
+        src/parser.cpp
+        src/parser_internal.cpp
+        src/parser_internal.h
+        src/token.cpp
 )
 
 target_include_directories(light_angel_core
-  PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
+        PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
 )
 
 target_link_libraries(light_angel_core
-  PRIVATE
-    fmt::fmt
+        PRIVATE
+        fmt::fmt
+)
+
+target_compile_definitions(light_angel_core
+        PRIVATE
+        $<$<CONFIG:Debug>:LIGHT_ANGEL_DEBUG>
 )
 
 light_angel_enable_warnings(light_angel_core)
