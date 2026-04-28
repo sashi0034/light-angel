@@ -5,5 +5,13 @@
 
 namespace light_angel
 {
-    std::unique_ptr<Node_Script> Parse(str_view source);
+    struct ParseResult
+    {
+        std::unique_ptr<Node_Script> script;
+        int errorCount = 0;
+
+        bool ok() const { return errorCount == 0; }
+    };
+
+    ParseResult Parse(str_view source);
 } // namespace light_angel

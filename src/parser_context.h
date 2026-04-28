@@ -10,6 +10,7 @@ namespace light_angel
         str_view source;
 
         explicit ParserContext(str_view source) noexcept;
+        ~ParserContext();
 
         str_view textOf(const TokenView& view) const
         {
@@ -85,6 +86,14 @@ namespace light_angel
 
             return false;
         }
+
+        void advanceError()
+        {
+            ++errorCount;
+            advance();
+        }
+
+        int errorCount = 0;
 
         /// @brief Returns the span covering tokens from startCursor up to (but not including) cursor.
         SourceSpan spanFrom(uint32_t startCursor) const

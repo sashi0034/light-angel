@@ -2,11 +2,7 @@
 
 namespace
 {
-    using namespace light_angel;
-
-    constexpr str_view emptySource{};
-
-    ParserContext g_activeContext{emptySource};
+    light_angel::ParserContext* g_activeContextPtr = nullptr;
 } // namespace
 
 namespace light_angel
@@ -14,6 +10,13 @@ namespace light_angel
     ParserContext::ParserContext(str_view src) noexcept
         : source(src), m_lexer(src, 0)
     {
+        g_activeContextPtr = this;
+    }
+
+    ParserContext::~ParserContext()
+    {
+        if (g_activeContextPtr == this)
+            g_activeContextPtr = nullptr;
     }
 
     void ParserContext::ensureAhead(uint32_t step) const
@@ -34,6 +37,6 @@ namespace light_angel
 
     ParserContext& GetActiveParser()
     {
-        return g_activeContext;
+        return *g_activeContextPtr;
     }
 } // namespace light_angel

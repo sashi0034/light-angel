@@ -328,7 +328,7 @@ namespace
                 continue;
             }
 
-            ctx.advance(); // error recovery: skip unrecognized token
+            ctx.advanceError(); // error recovery: skip unrecognized token
         }
 
         node->span = ctx.spanFrom(start);
@@ -570,7 +570,7 @@ namespace
                 continue;
             }
 
-            ctx.advance();
+            ctx.advanceError();
         }
 
         expectToken(ctx, "}");
@@ -732,6 +732,12 @@ namespace
             node->entries.push_back(std::move(entry));
         }
 
+        if (node->entries.empty())
+        {
+            ctx.rewindTo(start);
+            return nullptr;
+        }
+
         if (!expectToken(ctx, "}"))
         {
             ctx.rewindTo(start);
@@ -872,7 +878,7 @@ namespace
                 continue;
             }
 
-            ctx.advance();
+            ctx.advanceError();
         }
 
         expectToken(ctx, "}");
@@ -1071,7 +1077,7 @@ namespace
         {
             if (!ctx.check("get") && !ctx.check("set"))
             {
-                ctx.advance();
+                ctx.advanceError();
                 continue;
             }
 
@@ -1177,7 +1183,7 @@ namespace
                 continue;
             }
 
-            ctx.advance();
+            ctx.advanceError();
         }
 
         expectToken(ctx, "}");
@@ -1583,7 +1589,7 @@ namespace
             auto c = parseCase(ctx);
             if (!c)
             {
-                ctx.advance();
+                ctx.advanceError();
                 continue;
             }
 
@@ -2291,9 +2297,10 @@ namespace
 
 namespace light_angel
 {
-    std::unique_ptr<Node_Script> Parse(str_view source)
+    ParseResult Parse(str_view source)
     {
         ParserContext ctx(source);
-        return parseScript(ctx);
+        auto script = parseScript(ctx);
+        return ParseResult{std::move(script), ctx.errorCount};
     }
 } // namespace light_angel
