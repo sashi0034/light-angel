@@ -30,7 +30,7 @@ namespace light_angel
         }
     };
 
-    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
+    // 'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'
     struct FuncAttr
     {
         uint8_t flags = 0;
@@ -48,7 +48,7 @@ namespace light_angel
         }
     };
 
-    // **BNF** TYPEMODIFIER ::= ['&' ['in' | 'out' | 'inout'] ['+'] ['if_handle_then_const']]
+    // ['&' ['in' | 'out' | 'inout'] ['+'] ['if_handle_then_const']]
     enum class RefDirection
     {
         None,
@@ -277,6 +277,9 @@ namespace light_angel
         FuncAttr funcAttr;
         std::unique_ptr<Node_StatBlock> body; // null = ';'
     };
+
+    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
+    // n/a
 
     // **BNF** LISTPATTERN ::= '{' LISTENTRY {',' LISTENTRY} '}'
     struct Node_ListPattern final : NodeBase

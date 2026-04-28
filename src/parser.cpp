@@ -14,6 +14,7 @@ namespace
     std::unique_ptr<Node_Class> parseClass(ParserContext& ctx);
     std::unique_ptr<Node_TypeDef> parseTypeDef(ParserContext& ctx);
     std::unique_ptr<Node_Func> parseFunc(ParserContext& ctx);
+    FuncAttr parseFuncAttr(ParserContext& ctx);
     std::unique_ptr<Node_ListPattern> parseListPattern(ParserContext& ctx);
     std::unique_ptr<Node_ListEntry> parseListEntry(ParserContext& ctx);
     std::unique_ptr<Node_Interface> parseInterface(ParserContext& ctx);
@@ -30,7 +31,6 @@ namespace
     std::unique_ptr<Node_InitList> parseInitList(ParserContext& ctx);
     std::unique_ptr<Node_Scope> parseScope(ParserContext& ctx);
     std::unique_ptr<Node_DataType> parseDataType(ParserContext& ctx);
-    FuncAttr parseFuncAttr(ParserContext& ctx);
     std::unique_ptr<NodeBase> parseStatement(ParserContext& ctx);
     std::unique_ptr<Node_Switch> parseSwitch(ParserContext& ctx);
     std::unique_ptr<Node_Break> parseBreak(ParserContext& ctx);
@@ -698,6 +698,50 @@ namespace
         node->funcAttr = funcAttr;
         node->body = std::move(body);
         return node;
+    }
+
+    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
+    FuncAttr parseFuncAttr(ParserContext& ctx)
+    {
+        FuncAttr attr;
+        while (!ctx.isEnd())
+        {
+            str_view t = ctx.peekText();
+            if (t == "override")
+            {
+                attr.flags |= FuncAttr::Override;
+                ctx.advance();
+            }
+            else if (t == "final")
+            {
+                attr.flags |= FuncAttr::Final;
+                ctx.advance();
+            }
+            else if (t == "explicit")
+            {
+                attr.flags |= FuncAttr::Explicit;
+                ctx.advance();
+            }
+            else if (t == "property")
+            {
+                attr.flags |= FuncAttr::Property;
+                ctx.advance();
+            }
+            else if (t == "delete")
+            {
+                attr.flags |= FuncAttr::Delete;
+                ctx.advance();
+            }
+            else if (t == "nodiscard")
+            {
+                attr.flags |= FuncAttr::Nodiscard;
+                ctx.advance();
+            }
+            else
+                break;
+        }
+
+        return attr;
     }
 
     // **BNF** LISTPATTERN ::= '{' LISTENTRY {',' LISTENTRY} '}'
@@ -1490,50 +1534,6 @@ namespace
 
     // **BNF** PRIMITIVETYPE ::= 'void' | 'int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64' | 'float' | 'double' | 'bool'
     // n/a
-
-    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
-    FuncAttr parseFuncAttr(ParserContext& ctx)
-    {
-        FuncAttr attr;
-        while (!ctx.isEnd())
-        {
-            str_view t = ctx.peekText();
-            if (t == "override")
-            {
-                attr.flags |= FuncAttr::Override;
-                ctx.advance();
-            }
-            else if (t == "final")
-            {
-                attr.flags |= FuncAttr::Final;
-                ctx.advance();
-            }
-            else if (t == "explicit")
-            {
-                attr.flags |= FuncAttr::Explicit;
-                ctx.advance();
-            }
-            else if (t == "property")
-            {
-                attr.flags |= FuncAttr::Property;
-                ctx.advance();
-            }
-            else if (t == "delete")
-            {
-                attr.flags |= FuncAttr::Delete;
-                ctx.advance();
-            }
-            else if (t == "nodiscard")
-            {
-                attr.flags |= FuncAttr::Nodiscard;
-                ctx.advance();
-            }
-            else
-                break;
-        }
-
-        return attr;
-    }
 
     // **BNF** STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
     std::unique_ptr<NodeBase> parseStatement(ParserContext& ctx)
