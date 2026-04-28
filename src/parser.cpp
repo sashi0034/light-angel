@@ -76,7 +76,7 @@ namespace
     bool isExprPreOp(str_view s)
     {
         return s == "-" || s == "+" || s == "!" || s == "++" || s == "--" ||
-               s == "~" || s == "@";
+               s == "~" || s == "@" || s == "not";
     }
 
     bool isExprOp(str_view s)
@@ -104,6 +104,7 @@ namespace
             return true;
         }
 
+        ctx.reportError(ctx.peek().view.span(), fmt::format("expected '{}'", s));
         return false;
     }
 
@@ -507,7 +508,11 @@ namespace
 
         ctx.advance();
 
-        if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+        if (!ctx.checkKind(TokenKind::Name))
+        {
+            ctx.rewindTo(start);
+            return nullptr;
+        }
 
         auto ident = ctx.consumeView();
 
@@ -658,27 +663,6 @@ namespace
         }
 
         auto listPattern = parseListPattern(ctx);
-        if (listPattern)
-        {
-            if (!expectToken(ctx, ";"))
-            {
-                ctx.rewindTo(start);
-                return nullptr;
-            }
-
-            auto node = std::make_unique<Node_Func>(ctx.spanFrom(start));
-            node->attr = attr;
-            node->access = access;
-            node->isDestructor = isDestructor;
-            node->returnType = std::move(returnType);
-            node->isReturnRef = isReturnRef;
-            node->identifier = ident;
-            node->templateParams = std::move(templateParams);
-            node->params = std::move(params);
-            node->listPattern = std::move(listPattern);
-            return node;
-        }
-
         bool isConst = ctx.consume("const");
         auto funcAttr = parseFuncAttr(ctx);
 
@@ -697,6 +681,7 @@ namespace
         node->identifier = ident;
         node->templateParams = std::move(templateParams);
         node->params = std::move(params);
+        node->listPattern = std::move(listPattern);
         node->isConst = isConst;
         node->funcAttr = funcAttr;
         node->body = std::move(body);
@@ -785,11 +770,13 @@ namespace
             return nullptr;
         }
 
-        if (!expectToken(ctx, "}"))
+        if (ctx.peekText() != "}")
         {
             ctx.rewindTo(start);
             return nullptr;
         }
+
+        ctx.advance();
 
         node->span = ctx.spanFrom(start);
         return node;
@@ -2259,7 +2246,11 @@ namespace
         if (!ctx.isEnd() && isAssignOp(ctx.peekText()))
         {
             auto op = ctx.consumeView();
+
             auto rhs = parseAssign(ctx);
+            if (!rhs)
+                ctx.reportError(ctx.peek().view.span(), "expected expression after operator");
+
             auto node = std::make_unique<Node_Assign>(ctx.spanFrom(start));
             node->cond = std::move(cond);
             node->op = op;
