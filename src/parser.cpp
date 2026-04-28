@@ -427,11 +427,11 @@ namespace
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto node = std::make_unique<Node_Enum>();
         node->attr = attr;
-        node->identifier = ident;
+        node->identifier = identifier;
 
         if (ctx.check(":"))
         {
@@ -514,11 +514,11 @@ namespace
             return nullptr;
         }
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto node = std::make_unique<Node_Class>();
         node->attr = attr;
-        node->identifier = ident;
+        node->identifier = identifier;
 
         if (ctx.check(";"))
         {
@@ -600,13 +600,13 @@ namespace
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         expectToken(ctx, ";");
 
         auto node = std::make_unique<Node_TypeDef>(ctx.spanFrom(start));
         node->primitiveType = primTok;
-        node->identifier = ident;
+        node->identifier = identifier;
         return node;
     }
 
@@ -650,7 +650,7 @@ namespace
             return nullptr;
         }
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         std::vector<std::unique_ptr<Node_Type>> templateParams;
         parseTemplateTypeArgs(ctx, templateParams);
@@ -678,7 +678,7 @@ namespace
         node->isDestructor = isDestructor;
         node->returnType = std::move(returnType);
         node->isReturnRef = isReturnRef;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->templateParams = std::move(templateParams);
         node->params = std::move(params);
         node->listPattern = std::move(listPattern);
@@ -860,11 +860,11 @@ namespace
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto node = std::make_unique<Node_Interface>();
         node->attr = attr;
-        node->identifier = ident;
+        node->identifier = identifier;
 
         if (ctx.check(";"))
         {
@@ -1009,7 +1009,7 @@ namespace
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto params = parseParamList(ctx);
         if (!params) return nullptr;
@@ -1029,7 +1029,7 @@ namespace
         auto node = std::make_unique<Node_Import>(ctx.spanFrom(start));
         node->type = std::move(type);
         node->isRef = isRef;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->params = std::move(params);
         node->funcAttr = funcAttr;
         node->fromString = fromStr;
@@ -1057,7 +1057,7 @@ namespace
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto params = parseParamList(ctx);
         if (!params) return nullptr;
@@ -1068,7 +1068,7 @@ namespace
         node->attr = attr;
         node->returnType = std::move(returnType);
         node->isRef = isRef;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->params = std::move(params);
         return node;
     }
@@ -1096,7 +1096,7 @@ namespace
             return nullptr;
         }
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         if (!ctx.check("{"))
         {
@@ -1138,7 +1138,7 @@ namespace
         node->access = access;
         node->type = std::move(type);
         node->isRef = isRef;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->accessors = std::move(accessors);
         return node;
     }
@@ -1159,7 +1159,7 @@ namespace
             return nullptr;
         }
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto params = parseParamList(ctx);
         if (!params)
@@ -1180,7 +1180,7 @@ namespace
         auto node = std::make_unique<Node_InterfaceMethod>(ctx.spanFrom(start));
         node->type = std::move(type);
         node->isRef = isRef;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->params = std::move(params);
         node->isConst = isConst;
         node->funcAttr = funcAttr;
@@ -1277,8 +1277,8 @@ namespace
 
         auto mod = parseTypeModifier(ctx);
 
-        TokenView ident;
-        if (ctx.checkKind(TokenKind::Name)) ident = ctx.consumeView();
+        TokenView identifier;
+        if (ctx.checkKind(TokenKind::Name)) identifier = ctx.consumeView();
 
         bool isVariadic = false;
         bool hasVoidDefault = false;
@@ -1306,7 +1306,7 @@ namespace
         auto node = std::make_unique<Node_Parameter>(ctx.spanFrom(start));
         node->type = std::move(type);
         node->typeModifier = mod;
-        node->identifier = ident;
+        node->identifier = identifier;
         node->isVariadic = isVariadic;
         node->hasVoidDefault = hasVoidDefault;
         node->defaultExpr = std::move(defaultExpr);
@@ -2133,13 +2133,13 @@ namespace
         auto type = parseType(ctx);
         auto mod = parseTypeModifier(ctx);
 
-        TokenView ident;
-        if (ctx.checkKind(TokenKind::Name)) ident = ctx.consumeView();
+        TokenView identifier;
+        if (ctx.checkKind(TokenKind::Name)) identifier = ctx.consumeView();
 
         auto node = std::make_unique<Node_LambdaParam>(ctx.spanFrom(start));
         node->type = std::move(type);
         node->typeModifier = mod;
-        node->identifier = ident;
+        node->identifier = identifier;
         return node;
     }
 
@@ -2167,7 +2167,7 @@ namespace
         auto scope = parseScope(ctx);
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         std::vector<std::unique_ptr<Node_Type>> templateArgs;
         parseTemplateTypeArgs(ctx, templateArgs);
@@ -2177,7 +2177,7 @@ namespace
 
         auto node = std::make_unique<Node_FuncCall>(ctx.spanFrom(start));
         node->scope = std::move(scope);
-        node->identifier = ident;
+        node->identifier = identifier;
         node->templateArgs = std::move(templateArgs);
         node->args = std::move(args);
         return node;
@@ -2190,11 +2190,11 @@ namespace
         auto scope = parseScope(ctx);
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
 
-        auto ident = ctx.consumeView();
+        auto identifier = ctx.consumeView();
 
         auto node = std::make_unique<Node_VarAccess>(ctx.spanFrom(start));
         node->scope = std::move(scope);
-        node->identifier = ident;
+        node->identifier = identifier;
         return node;
     }
 
