@@ -1,5 +1,8 @@
 add_executable(light_angel_smoke_test
   main.cpp
+  test_parser.cpp
+  # Add new test source files here, e.g.:
+  # test_lexer.cpp
 )
 
 target_link_libraries(light_angel_smoke_test
