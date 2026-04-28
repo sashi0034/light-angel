@@ -67,3 +67,4 @@ target_compile_definitions(light_angel_core
 light_angel_enable_warnings(light_angel_core)
 
 add_subdirectory(test)
+add_subdirectory(sandbox)
