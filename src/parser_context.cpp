@@ -1,5 +1,7 @@
 #include "parser_context.h"
 
+#include <fmt/format.h>
+
 namespace
 {
     light_angel::ParserContext* g_activeContextPtr = nullptr;
@@ -31,6 +33,18 @@ namespace light_angel
             if (token.kind == TokenKind::Comment)
                 continue;
 
+            if (token.kind == TokenKind::Unknown)
+            {
+                auto span = token.view.span();
+                char_t ch = source.size() > span.offset ? source[span.offset] : '?';
+                m_diagnostics.push_back({
+                    Diagnostic::Severity::Error,
+                    span,
+                    fmt::format("unexpected character '{}'", ch),
+                });
+                continue;
+            }
+
             m_tokens.push_back(std::move(token));
         }
     }
@@ -49,6 +63,18 @@ namespace light_angel
             );
         }
 
+        advance();
+    }
+
+    void ParserContext::reportError(SourceSpan span, str_view message)
+    {
+        m_diagnostics.push_back({Diagnostic::Severity::Error, span, str_t(message)});
+    }
+
+    void ParserContext::advanceError()
+    {
+        auto span = peek().view.span();
+        reportError(span, fmt::format("unexpected token '{}'", textOf(peek().view)));
         advance();
     }
 

@@ -24,9 +24,15 @@ namespace light_angel
 
         TokenView(SourceSpan span);
 
-        SourceSpan span() const { return m_span; }
+        SourceSpan span() const
+        {
+            return m_span;
+        }
 
-        bool isEmpty() const { return m_span.length == 0; }
+        bool isEmpty() const
+        {
+            return m_span.length == 0;
+        }
 
     private:
         SourceSpan m_span{};
@@ -44,7 +50,20 @@ namespace light_angel
         Bits, // hex/binary bit-field literals (e.g. 0xFF, 0b101)
         Punctuator,
         Comment,
+        Unknown, // unrecognized character (lex error)
         EndOfFile,
+    };
+
+    struct Diagnostic
+    {
+        enum class Severity
+        {
+            Error
+        };
+
+        Severity severity = Severity::Error;
+        SourceSpan span{};
+        str_t message;
     };
 
     struct LexicalToken

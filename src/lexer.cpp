@@ -409,8 +409,10 @@ namespace light_angel
 
             if (tryLexName(lex, token)) return token;
 
-            // Unknown character — skip
-            lex.advance(); // TODO: report error
+            // Unknown character — return as Unknown token so the caller can report it
+            const uint32_t start = lex.offset();
+            lex.advance();
+            return LexicalToken{TokenKind::Unknown, TokenView{SourceSpan{start, 1}}};
         }
     }
 } // namespace light_angel

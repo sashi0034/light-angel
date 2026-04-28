@@ -2,6 +2,9 @@
 
 #include "parser_context.h"
 
+#include <algorithm>
+#include <fmt/format.h>
+
 namespace
 {
     using namespace light_angel;
@@ -2295,12 +2298,100 @@ namespace
     }
 } // namespace
 
+namespace
+{
+    light_angel::LineColumn offsetToLineColumn(light_angel::str_view source, uint32_t offset)
+    {
+        uint32_t line = 1;
+        uint32_t col = 1;
+        const uint32_t end = std::min(offset, static_cast<uint32_t>(source.size()));
+        for (uint32_t i = 0; i < end; ++i)
+        {
+            if (source[i] == '\n')
+            {
+                ++line;
+                col = 1;
+            }
+            else if (source[i] != '\r')
+            {
+                ++col;
+            }
+        }
+
+        return {line, col};
+    }
+
+    light_angel::str_view getSourceLine(light_angel::str_view source, uint32_t lineNumber)
+    {
+        uint32_t curLine = 1;
+        size_t lineStart = 0;
+        while (curLine < lineNumber)
+        {
+            auto pos = source.find('\n', lineStart);
+            if (pos == light_angel::str_view::npos) return {};
+            lineStart = pos + 1;
+            ++curLine;
+        }
+
+        auto lineEnd = source.find('\n', lineStart);
+        if (lineEnd == light_angel::str_view::npos) lineEnd = source.size();
+
+        auto line = source.substr(lineStart, lineEnd - lineStart);
+        if (!line.empty() && line.back() == '\r')
+            line = line.substr(0, line.size() - 1);
+
+        return line;
+    }
+} // namespace
+
 namespace light_angel
 {
     ParseResult Parse(str_view source)
     {
         ParserContext ctx(source);
         auto script = parseScript(ctx);
-        return ParseResult{std::move(script), ctx.errorCount};
+        return ParseResult{std::move(script), ctx.takeDiagnostics()};
+    }
+
+    str_t ParseResult::formatDiagnostics(str_view source, str_view filename) const
+    {
+        if (diagnostics.empty()) return {};
+
+        str_t result;
+        for (const auto& diag : diagnostics)
+        {
+            auto lc = offsetToLineColumn(source, diag.span.offset);
+            auto lineText = getSourceLine(source, lc.line);
+
+            // Width of the line number column
+            auto lineNumStr = fmt::format("{}", lc.line);
+            auto indent = str_t(lineNumStr.size(), ' ');
+
+            // error: message
+            result += fmt::format("error: {}\n", diag.message);
+
+            // --> location
+            if (!filename.empty())
+                result += fmt::format(" --> {}:{}:{}\n", filename, lc.line, lc.column);
+            else
+                result += fmt::format(" --> {}:{}\n", lc.line, lc.column);
+
+            // blank gutter
+            result += fmt::format("{} |\n", indent);
+
+            // source line
+            result += fmt::format("{} | {}\n", lineNumStr, lineText);
+
+            // caret
+            uint32_t caretOffset = lc.column > 0 ? lc.column - 1 : 0;
+            uint32_t caretLen = diag.span.length > 0 ? diag.span.length : 1;
+            str_t caretLine(caretOffset, ' ');
+            caretLine += str_t(caretLen, '^');
+            result += fmt::format("{} | {}\n", indent, caretLine);
+
+            result += "\n";
+        }
+
+        return result;
     }
 } // namespace light_angel

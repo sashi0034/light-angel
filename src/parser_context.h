@@ -103,13 +103,13 @@ namespace light_angel
         /// the next token, then the cursor advances past the single '>'.
         void consumeOneGt();
 
-        void advanceError()
-        {
-            ++errorCount;
-            advance();
-        }
+        void advanceError();
 
-        int errorCount = 0;
+        void reportError(SourceSpan span, str_view message);
+
+        const std::vector<Diagnostic>& diagnostics() const { return m_diagnostics; }
+
+        std::vector<Diagnostic> takeDiagnostics() { return std::move(m_diagnostics); }
 
         /// @brief Returns the span covering tokens from startCursor up to (but not including) cursor.
         SourceSpan spanFrom(uint32_t startCursor) const
@@ -133,6 +133,7 @@ namespace light_angel
 
         mutable LexerState m_lexer;
         mutable std::vector<LexicalToken> m_tokens;
+        mutable std::vector<Diagnostic> m_diagnostics;
         uint32_t m_cursor{};
     };
 

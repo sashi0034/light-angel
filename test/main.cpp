@@ -17,7 +17,7 @@ namespace
         else
         {
             ++g_fail;
-            std::fprintf(stderr, "FAIL [expected ok, errorCount=%d]: %s\n", r.errorCount, label);
+            std::fprintf(stderr, "FAIL [expected ok, errors=%zu]: %s\n", r.diagnostics.size(), label);
         }
     }
 
