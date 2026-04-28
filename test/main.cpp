@@ -21,7 +21,7 @@ namespace
         }
     }
 
-    void expectParseFail(light_angel::str_view source, const char* label)
+    void expectParseError(light_angel::str_view source, const char* label)
     {
         auto r = light_angel::Parse(source);
         if (!r.ok())
@@ -36,8 +36,8 @@ namespace
     }
 } // namespace
 
-#define EXPECT_PARSE_OK(src)   expectParseOk(src, src)
-#define EXPECT_PARSE_FAIL(src) expectParseFail(src, src)
+#define EXPECT_PARSE_OK(src)    expectParseOk(src, src)
+#define EXPECT_PARSE_ERROR(src) expectParseError(src, src)
 
 // -----------------------------------------------
 // Parse-success cases
@@ -92,10 +92,10 @@ static void testParseOk()
 // -----------------------------------------------
 // Parse-failure cases
 
-static void testParseFail()
+static void testParseError()
 {
-    EXPECT_PARSE_FAIL("@@@ invalid tokens @@@");
-    EXPECT_PARSE_FAIL("class { }"); // missing class name
+    EXPECT_PARSE_ERROR("@@@ invalid tokens @@@");
+    EXPECT_PARSE_ERROR("class { }"); // missing class name
 }
 
 // -----------------------------------------------
@@ -103,7 +103,7 @@ static void testParseFail()
 int main()
 {
     testParseOk();
-    testParseFail();
+    testParseError();
 
     std::printf("Results: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
