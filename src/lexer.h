@@ -8,8 +8,8 @@ namespace light_angel
     class LexerState
     {
     public:
-        explicit LexerState(str_view source)
-            : m_source(source)
+        explicit LexerState(str_view source, uint32_t offset)
+            : m_source(source), m_offset(offset)
         {
         }
 

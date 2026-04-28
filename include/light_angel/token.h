@@ -24,6 +24,10 @@ namespace light_angel
 
         TokenView(SourceSpan span);
 
+        SourceSpan span() const { return m_span; }
+
+        bool isEmpty() const { return m_span.length == 0; }
+
     private:
         SourceSpan m_span{};
 
@@ -37,6 +41,7 @@ namespace light_angel
         Name, // identifier or keyword
         Number,
         String,
+        Bits, // hex/binary bit-field literals (e.g. 0xFF, 0b101)
         Punctuator,
         Comment,
         EndOfFile,

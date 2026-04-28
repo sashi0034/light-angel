@@ -96,7 +96,7 @@ InsertNewlineAtEOF: true
 InsertTrailingCommas: None
 SeparateDefinitionBlocks: Always
 KeepEmptyLinesAtTheStartOfBlocks: false
-MaxEmptyLinesToKeep: 3
+MaxEmptyLinesToKeep: 1
 ReflowComments: false
 
 BitFieldColonSpacing: Both

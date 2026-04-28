@@ -671,7 +671,7 @@ namespace light_angel
     {
         enum class Kind
         {
-            Dot, // '.' (FUNCCALL | IDENTIFIER)
+            Member, // '.' (FUNCCALL | IDENTIFIER)
             Subscript, // '[' ... ']'
             Call, // ARGLIST
             Increment, // '++'
@@ -686,7 +686,7 @@ namespace light_angel
 
         explicit Node_ExprPostOp(SourceSpan span = {}) : NodeBase(NodeKind::ExprPostOp, span) {}
 
-        Kind opKind = Kind::Dot;
+        Kind opKind = Kind::Member;
         // Kind::Dot — dotAccess holds Node_FuncCall for FUNCCALL, dotIdentifier holds the name for IDENTIFIER
         std::unique_ptr<NodeBase> dotAccess;
         TokenView dotIdentifier;
