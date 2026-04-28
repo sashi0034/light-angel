@@ -82,6 +82,7 @@ namespace light_angel
                 advance();
                 return true;
             }
+
             return false;
         }
 

@@ -157,6 +157,7 @@ namespace
             else
                 break;
         }
+
         return attr;
     }
 
@@ -167,11 +168,13 @@ namespace
             ctx.advance();
             return AccessModifier::Private;
         }
+
         if (ctx.check("protected"))
         {
             ctx.advance();
             return AccessModifier::Protected;
         }
+
         return std::nullopt;
     }
 
@@ -181,6 +184,7 @@ namespace
     )
     {
         if (!ctx.check("<")) return false;
+
         const uint32_t saved = ctx.save();
         ctx.advance();
 
@@ -193,6 +197,7 @@ namespace
                 out.clear();
                 return false;
             }
+
             out.push_back(std::move(type));
 
             if (ctx.check(">"))
@@ -200,12 +205,14 @@ namespace
                 ctx.advance();
                 return true;
             }
+
             if (!ctx.check(","))
             {
                 ctx.rewindTo(saved);
                 out.clear();
                 return false;
             }
+
             ctx.advance();
         }
 
@@ -217,20 +224,24 @@ namespace
     bool canParseLambda(ParserContext& ctx)
     {
         if (!ctx.check("function") || !ctx.check("(", 1)) return false;
+
         int depth = 0;
         uint32_t i = 1;
         while (true)
         {
             const LexicalToken& token = ctx.peek(i);
             if (token.kind == TokenKind::EndOfFile) return false;
+
             str_view t = ctx.textOf(token.view);
             if (t == "(")
                 depth++;
             else if (t == ")")
             {
                 if (depth == 0) return ctx.check("{", i + 1);
+
                 depth--;
             }
+
             i++;
         }
     }
@@ -256,51 +267,61 @@ namespace
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseTypeDef(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseNamespace(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseUsing(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseClass(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseInterface(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseEnum(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseFuncDef(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseFunc(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseVirtualProp(ctx))
             {
                 node->children.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseVar(ctx))
             {
                 node->children.push_back(std::move(n));
@@ -318,6 +339,7 @@ namespace
     std::unique_ptr<Node_Namespace> parseNamespace(ParserContext& ctx)
     {
         if (!ctx.check("namespace")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -325,12 +347,15 @@ namespace
         while (!ctx.isEnd())
         {
             if (!ctx.checkKind(TokenKind::Name)) break;
+
             identifiers.push_back(ctx.consumeView());
             if (!ctx.check("::")) break;
+
             ctx.advance();
         }
 
         if (identifiers.empty()) return nullptr;
+
         if (!expectToken(ctx, "{")) return nullptr;
 
         auto script = parseScript(ctx, "}");
@@ -346,6 +371,7 @@ namespace
     std::unique_ptr<Node_Using> parseUsing(ParserContext& ctx)
     {
         if (!ctx.check("using")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -354,14 +380,17 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         std::vector<TokenView> identifiers;
         while (!ctx.isEnd())
         {
             if (!ctx.checkKind(TokenKind::Name)) break;
+
             identifiers.push_back(ctx.consumeView());
             if (!ctx.check("::")) break;
+
             ctx.advance();
         }
 
@@ -370,6 +399,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         expectToken(ctx, ";");
 
         auto node = std::make_unique<Node_Using>(ctx.spanFrom(start));
@@ -388,9 +418,11 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto node = std::make_unique<Node_Enum>();
@@ -420,12 +452,15 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
                 if (ctx.check("}")) break;
             }
+
             first = false;
 
             if (!ctx.checkKind(TokenKind::Name)) break;
+
             Node_Enum::EnumValue ev;
             ev.name = ctx.consumeView();
             if (ctx.check("="))
@@ -433,6 +468,7 @@ namespace
                 ctx.advance();
                 ev.expr = parseExpr(ctx);
             }
+
             node->values.push_back(std::move(ev));
         }
 
@@ -454,6 +490,7 @@ namespace
             attr.flags |= EntityAttribute::Mixin;
             ctx.advance();
         }
+
         {
             auto extra = parseEntityAttribute(ctx);
             attr.flags |= extra.flags;
@@ -464,9 +501,11 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto node = std::make_unique<Node_Class>();
@@ -490,12 +529,15 @@ namespace
                 if (!first)
                 {
                     if (!ctx.check(",")) break;
+
                     ctx.advance();
                 }
+
                 first = false;
                 Node_Class::BaseClass b;
                 b.scope = parseScope(ctx);
                 if (ctx.checkKind(TokenKind::Name)) b.identifier = ctx.consumeView();
+
                 node->bases.push_back(std::move(b));
             }
         }
@@ -509,21 +551,25 @@ namespace
                 node->members.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseFunc(ctx))
             {
                 node->members.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseVirtualProp(ctx))
             {
                 node->members.push_back(std::move(n));
                 continue;
             }
+
             if (auto n = parseVar(ctx))
             {
                 node->members.push_back(std::move(n));
                 continue;
             }
+
             ctx.advance();
         }
 
@@ -536,13 +582,16 @@ namespace
     std::unique_ptr<Node_TypeDef> parseTypeDef(ParserContext& ctx)
     {
         if (!ctx.check("typedef")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         if (!ctx.checkKind(TokenKind::Name) || !isPrimType(ctx.peekText())) return nullptr;
+
         auto primTok = ctx.consumeView();
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         expectToken(ctx, ";");
@@ -583,6 +632,7 @@ namespace
                 ctx.rewindTo(start);
                 return nullptr;
             }
+
             isReturnRef = ctx.consume("&");
         }
 
@@ -591,6 +641,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         auto ident = ctx.consumeView();
 
         std::vector<std::unique_ptr<Node_Type>> templateParams;
@@ -611,6 +662,7 @@ namespace
                 ctx.rewindTo(start);
                 return nullptr;
             }
+
             auto node = std::make_unique<Node_Func>(ctx.spanFrom(start));
             node->attr = attr;
             node->access = access;
@@ -652,6 +704,7 @@ namespace
     std::unique_ptr<Node_ListPattern> parseListPattern(ParserContext& ctx)
     {
         if (!ctx.check("{")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -663,8 +716,10 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             auto entry = parseListEntry(ctx);
@@ -673,6 +728,7 @@ namespace
                 ctx.rewindTo(start);
                 return nullptr;
             }
+
             node->entries.push_back(std::move(entry));
         }
 
@@ -681,6 +737,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         node->span = ctx.spanFrom(start);
         return node;
     }
@@ -723,6 +780,7 @@ namespace
         {
             auto t = parseType(ctx);
             if (!t) break;
+
             node->types.push_back(std::move(t));
 
             if (!ctx.check(",")) break;
@@ -741,6 +799,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         node->span = ctx.spanFrom(start);
         return node;
     }
@@ -756,9 +815,11 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto node = std::make_unique<Node_Interface>();
@@ -782,12 +843,15 @@ namespace
                 if (!first)
                 {
                     if (!ctx.check(",")) break;
+
                     ctx.advance();
                 }
+
                 first = false;
                 Node_Interface::BaseInterface b;
                 b.scope = parseScope(ctx);
                 if (ctx.checkKind(TokenKind::Name)) b.identifier = ctx.consumeView();
+
                 node->bases.push_back(std::move(b));
             }
         }
@@ -801,11 +865,13 @@ namespace
                 node->members.push_back(std::move(im));
                 continue;
             }
+
             if (auto vp = parseVirtualProp(ctx))
             {
                 node->members.push_back(std::move(vp));
                 continue;
             }
+
             ctx.advance();
         }
 
@@ -845,11 +911,14 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             if (!ctx.checkKind(TokenKind::Name)) break;
+
             Node_Var::VarDecl decl;
             decl.identifier = ctx.consumeView();
 
@@ -874,6 +943,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         if (!expectToken(ctx, ";"))
         {
             ctx.rewindTo(start);
@@ -888,6 +958,7 @@ namespace
     std::unique_ptr<Node_Import> parseImport(ParserContext& ctx)
     {
         if (!ctx.check("import")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -897,6 +968,7 @@ namespace
         bool isRef = ctx.consume("&");
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto params = parseParamList(ctx);
@@ -905,9 +977,11 @@ namespace
         auto funcAttr = parseFuncAttr(ctx);
 
         if (!ctx.check("from")) return nullptr;
+
         ctx.advance();
 
         if (!ctx.checkKind(TokenKind::String)) return nullptr;
+
         auto fromStr = ctx.consumeView();
 
         expectToken(ctx, ";");
@@ -933,6 +1007,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         auto returnType = parseType(ctx);
@@ -941,6 +1016,7 @@ namespace
         bool isRef = ctx.consume("&");
 
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto params = parseParamList(ctx);
@@ -979,6 +1055,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         auto ident = ctx.consumeView();
 
         if (!ctx.check("{"))
@@ -986,6 +1063,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         ctx.advance();
 
         std::vector<Node_VirtualProp::Accessor> accessors;
@@ -996,6 +1074,7 @@ namespace
                 ctx.advance();
                 continue;
             }
+
             Node_VirtualProp::Accessor acc;
             acc.isGet = ctx.check("get");
             ctx.advance();
@@ -1009,6 +1088,7 @@ namespace
             {
                 acc.body = parseStatBlock(ctx);
             }
+
             accessors.push_back(std::move(acc));
         }
 
@@ -1038,6 +1118,7 @@ namespace
             ctx.rewindTo(start);
             return nullptr;
         }
+
         auto ident = ctx.consumeView();
 
         auto params = parseParamList(ctx);
@@ -1070,6 +1151,7 @@ namespace
     std::unique_ptr<Node_StatBlock> parseStatBlock(ParserContext& ctx)
     {
         if (!ctx.check("{")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1082,16 +1164,19 @@ namespace
                 node->statements.push_back(std::move(u));
                 continue;
             }
+
             if (auto v = parseVar(ctx))
             {
                 node->statements.push_back(std::move(v));
                 continue;
             }
+
             if (auto s = parseStatement(ctx))
             {
                 node->statements.push_back(std::move(s));
                 continue;
             }
+
             ctx.advance();
         }
 
@@ -1104,6 +1189,7 @@ namespace
     std::unique_ptr<Node_ParamList> parseParamList(ParserContext& ctx)
     {
         if (!ctx.check("(")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1124,12 +1210,15 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             auto param = parseParameter(ctx);
             if (!param) break;
+
             node->params.push_back(std::move(param));
         }
 
@@ -1210,6 +1299,7 @@ namespace
         }
 
         if (ctx.check("+")) ctx.advance();
+
         if (ctx.check("if_handle_then_const"))
         {
             mod.ifHandleThenConst = true;
@@ -1256,6 +1346,7 @@ namespace
             {
                 ctx.advance();
                 if (ctx.check("+")) ctx.advance();
+
                 if (ctx.check("const"))
                 {
                     ctx.advance();
@@ -1283,6 +1374,7 @@ namespace
     std::unique_ptr<Node_InitList> parseInitList(ParserContext& ctx)
     {
         if (!ctx.check("{")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1294,9 +1386,11 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
                 if (ctx.check("}")) break;
             }
+
             first = false;
 
             if (auto inner = parseInitList(ctx))
@@ -1304,11 +1398,13 @@ namespace
                 node->items.push_back(std::move(inner));
                 continue;
             }
+
             if (auto assign = parseAssign(ctx))
             {
                 node->items.push_back(std::move(assign));
                 continue;
             }
+
             break;
         }
 
@@ -1356,6 +1452,7 @@ namespace
                     parts.push_back(std::move(part));
                     continue;
                 }
+
                 ctx.rewindTo(savedPos);
             }
 
@@ -1381,6 +1478,7 @@ namespace
             node->token = token;
             return node;
         }
+
         return nullptr;
     }
 
@@ -1427,6 +1525,7 @@ namespace
             else
                 break;
         }
+
         return attr;
     }
 
@@ -1434,17 +1533,29 @@ namespace
     std::unique_ptr<NodeBase> parseStatement(ParserContext& ctx)
     {
         if (auto n = parseIf(ctx)) return n;
+
         if (auto n = parseFor(ctx)) return n;
+
         if (auto n = parseForEach(ctx)) return n;
+
         if (auto n = parseWhile(ctx)) return n;
+
         if (auto n = parseReturn(ctx)) return n;
+
         if (auto n = parseStatBlock(ctx)) return n;
+
         if (auto n = parseBreak(ctx)) return n;
+
         if (auto n = parseContinue(ctx)) return n;
+
         if (auto n = parseDoWhile(ctx)) return n;
+
         if (auto n = parseSwitch(ctx)) return n;
+
         if (auto n = parseTry(ctx)) return n;
+
         if (auto n = parseExprStat(ctx)) return n;
+
         return nullptr;
     }
 
@@ -1452,12 +1563,15 @@ namespace
     std::unique_ptr<Node_Switch> parseSwitch(ParserContext& ctx)
     {
         if (!ctx.check("switch")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         if (!expectToken(ctx, "(")) return nullptr;
+
         auto assign = parseAssign(ctx);
         if (!assign) return nullptr;
+
         expectToken(ctx, ")");
         expectToken(ctx, "{");
 
@@ -1472,6 +1586,7 @@ namespace
                 ctx.advance();
                 continue;
             }
+
             node->cases.push_back(std::move(c));
         }
 
@@ -1484,6 +1599,7 @@ namespace
     std::unique_ptr<Node_Break> parseBreak(ParserContext& ctx)
     {
         if (!ctx.check("break")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
         expectToken(ctx, ";");
@@ -1494,6 +1610,7 @@ namespace
     std::unique_ptr<Node_For> parseFor(ParserContext& ctx)
     {
         if (!ctx.check("for")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1516,11 +1633,14 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
             auto assign = parseAssign(ctx);
             if (!assign) break;
+
             node->incs.push_back(std::move(assign));
         }
 
@@ -1534,6 +1654,7 @@ namespace
     std::unique_ptr<Node_ForEach> parseForEach(ParserContext& ctx)
     {
         if (!ctx.check("foreach")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1547,14 +1668,18 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             Node_ForEach::IterVar v;
             v.type = parseType(ctx);
             if (!v.type) break;
+
             if (ctx.checkKind(TokenKind::Name)) v.identifier = ctx.consumeView();
+
             node->vars.push_back(std::move(v));
         }
 
@@ -1570,12 +1695,15 @@ namespace
     std::unique_ptr<Node_While> parseWhile(ParserContext& ctx)
     {
         if (!ctx.check("while")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         if (!expectToken(ctx, "(")) return nullptr;
+
         auto cond = parseAssign(ctx);
         if (!cond) return nullptr;
+
         if (!expectToken(ctx, ")")) return nullptr;
 
         auto node = std::make_unique<Node_While>();
@@ -1589,13 +1717,16 @@ namespace
     std::unique_ptr<Node_DoWhile> parseDoWhile(ParserContext& ctx)
     {
         if (!ctx.check("do")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         auto node = std::make_unique<Node_DoWhile>();
         node->body = parseStatement(ctx);
         if (!expectToken(ctx, "while")) return nullptr;
+
         if (!expectToken(ctx, "(")) return nullptr;
+
         node->cond = parseAssign(ctx);
         expectToken(ctx, ")");
         expectToken(ctx, ";");
@@ -1607,12 +1738,15 @@ namespace
     std::unique_ptr<Node_If> parseIf(ParserContext& ctx)
     {
         if (!ctx.check("if")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         if (!expectToken(ctx, "(")) return nullptr;
+
         auto cond = parseAssign(ctx);
         if (!cond) return nullptr;
+
         if (!expectToken(ctx, ")")) return nullptr;
 
         auto node = std::make_unique<Node_If>();
@@ -1633,6 +1767,7 @@ namespace
     std::unique_ptr<Node_Continue> parseContinue(ParserContext& ctx)
     {
         if (!ctx.check("continue")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
         expectToken(ctx, ";");
@@ -1663,13 +1798,16 @@ namespace
     std::unique_ptr<Node_Try> parseTry(ParserContext& ctx)
     {
         if (!ctx.check("try")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         auto node = std::make_unique<Node_Try>();
         node->tryBlock = parseStatBlock(ctx);
         if (!node->tryBlock) return nullptr;
+
         if (!expectToken(ctx, "catch")) return nullptr;
+
         node->catchBlock = parseStatBlock(ctx);
         node->span = ctx.spanFrom(start);
         return node;
@@ -1679,11 +1817,13 @@ namespace
     std::unique_ptr<Node_Return> parseReturn(ParserContext& ctx)
     {
         if (!ctx.check("return")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         auto node = std::make_unique<Node_Return>();
         if (!ctx.check(";")) node->value = parseAssign(ctx);
+
         expectToken(ctx, ";");
         node->span = ctx.spanFrom(start);
         return node;
@@ -1715,6 +1855,7 @@ namespace
         {
             auto s = parseStatement(ctx);
             if (!s) break;
+
             node->statements.push_back(std::move(s));
         }
 
@@ -1738,6 +1879,7 @@ namespace
             ot.op = ctx.consumeView();
             ot.term = parseExprTerm(ctx);
             if (!ot.term) break;
+
             node->rest.push_back(std::move(ot));
         }
 
@@ -1775,6 +1917,7 @@ namespace
                 return node;
             }
         }
+
         ctx.rewindTo(savedPos);
 
         auto node = std::make_unique<Node_ExprTerm>();
@@ -1787,6 +1930,7 @@ namespace
         if (!node->exprValue)
         {
             if (node->preOps.empty()) return nullptr;
+
             ctx.rewindTo(start);
             return nullptr;
         }
@@ -1795,6 +1939,7 @@ namespace
         {
             auto post = parseExprPostOp(ctx);
             if (!post) break;
+
             node->postOps.push_back(std::move(post));
         }
 
@@ -1824,13 +1969,16 @@ namespace
         if (canParseLambda(ctx)) return parseLambda(ctx);
 
         if (auto n = parseCast(ctx)) return n;
+
         if (auto n = parseLiteral(ctx)) return n;
 
         const uint32_t savedPos = ctx.save();
         if (auto n = parseConstructorCall(ctx)) return n;
+
         ctx.rewindTo(savedPos);
 
         if (auto n = parseFuncCall(ctx)) return n;
+
         ctx.rewindTo(savedPos);
 
         if (auto n = parseVarAccess(ctx)) return n;
@@ -1884,8 +2032,10 @@ namespace
                 if (!first)
                 {
                     if (!ctx.check(",")) break;
+
                     ctx.advance();
                 }
+
                 first = false;
 
                 Node_ExprPostOp::IndexArg arg;
@@ -1894,9 +2044,11 @@ namespace
                     arg.name = ctx.consumeView();
                     ctx.advance();
                 }
+
                 arg.value = parseAssign(ctx);
                 node->indexArgs.push_back(std::move(arg));
             }
+
             expectToken(ctx, "]");
         }
         else if (auto al = parseArgList(ctx))
@@ -1925,10 +2077,12 @@ namespace
     std::unique_ptr<Node_Cast> parseCast(ParserContext& ctx)
     {
         if (!ctx.check("cast")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
         if (!expectToken(ctx, "<")) return nullptr;
+
         auto type = parseType(ctx);
         expectToken(ctx, ">");
         expectToken(ctx, "(");
@@ -1945,6 +2099,7 @@ namespace
     std::unique_ptr<Node_Lambda> parseLambda(ParserContext& ctx)
     {
         if (!ctx.check("function")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -1957,12 +2112,15 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             auto p = parseLambdaParam(ctx);
             if (!p) break;
+
             node->params.push_back(std::move(p));
         }
 
@@ -1995,6 +2153,7 @@ namespace
         const uint32_t start = ctx.save();
         if (ctx.checkKind(TokenKind::Number) || ctx.checkKind(TokenKind::String) ||
             ctx.checkKind(TokenKind::Bits) || ctx.check("true") ||
+
             ctx.check("false") || ctx.check("null"))
         {
             auto token = ctx.consumeView();
@@ -2011,6 +2170,7 @@ namespace
         const uint32_t start = ctx.save();
         auto scope = parseScope(ctx);
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         std::vector<std::unique_ptr<Node_Type>> templateArgs;
@@ -2033,6 +2193,7 @@ namespace
         const uint32_t start = ctx.save();
         auto scope = parseScope(ctx);
         if (!ctx.checkKind(TokenKind::Name)) return nullptr;
+
         auto ident = ctx.consumeView();
 
         auto node = std::make_unique<Node_VarAccess>(ctx.spanFrom(start));
@@ -2045,6 +2206,7 @@ namespace
     std::unique_ptr<Node_ArgList> parseArgList(ParserContext& ctx)
     {
         if (!ctx.check("(")) return nullptr;
+
         const uint32_t start = ctx.save();
         ctx.advance();
 
@@ -2056,8 +2218,10 @@ namespace
             if (!first)
             {
                 if (!ctx.check(",")) break;
+
                 ctx.advance();
             }
+
             first = false;
 
             Node_ArgList::Arg arg;
@@ -2066,6 +2230,7 @@ namespace
                 arg.name = ctx.consumeView();
                 ctx.advance();
             }
+
             arg.value = parseAssign(ctx);
             node->args.push_back(std::move(arg));
         }

@@ -47,8 +47,10 @@ namespace
             lex.advance(2);
             while (!lex.isEnd() && !lex.isNextLineBreak())
                 lex.advance();
+
             return true;
         }
+
         if (lex.startsWith("/*"))
         {
             lex.advance(2);
@@ -59,10 +61,13 @@ namespace
                     lex.advance(2);
                     break;
                 }
+
                 lex.advance();
             }
+
             return true;
         }
+
         return false;
     }
 
@@ -83,30 +88,37 @@ namespace
                 lex.advance(2);
                 while (!lex.isEnd() && (lex.peek() == '0' || lex.peek() == '1'))
                     lex.advance();
+
                 out = makeToken(TokenKind::Number, start, lex);
                 return true;
             }
+
             if (prefix == 'o' || prefix == 'O')
             {
                 lex.advance(2);
                 while (!lex.isEnd() && lex.peek() >= '0' && lex.peek() <= '7')
                     lex.advance();
+
                 out = makeToken(TokenKind::Number, start, lex);
                 return true;
             }
+
             if (prefix == 'd' || prefix == 'D')
             {
                 lex.advance(2);
                 while (!lex.isEnd() && isDigit(lex.peek()))
                     lex.advance();
+
                 out = makeToken(TokenKind::Number, start, lex);
                 return true;
             }
+
             if (prefix == 'x' || prefix == 'X')
             {
                 lex.advance(2);
                 while (!lex.isEnd() && isHexChar(lex.peek()))
                     lex.advance();
+
                 out = makeToken(TokenKind::Number, start, lex);
                 return true;
             }
@@ -173,11 +185,13 @@ namespace
             {
                 if (lex.isEnd())
                     break;
+
                 if (lex.startsWith("\"\"\""))
                 {
                     lex.advance(3);
                     break;
                 }
+
                 lex.advance();
             }
         }
@@ -190,11 +204,13 @@ namespace
             {
                 if (lex.isEnd() || lex.isNextLineBreak())
                     break;
+
                 if (!escaping && lex.peek() == quote)
                 {
                     lex.advance();
                     break;
                 }
+
                 escaping = (lex.peek() == '\\') && !escaping;
                 lex.advance();
             }
@@ -219,6 +235,7 @@ namespace
                 len = 2; // !=
             else
                 len = 1; // !
+
             break;
         case '#':
             len = 1;
@@ -233,6 +250,7 @@ namespace
                 len = 2; // &&
             else
                 len = 1; // &
+
             break;
         case '(':
         case ')':
@@ -256,6 +274,7 @@ namespace
                 len = 2; // *=
             else
                 len = 1; // *
+
             break;
         case '+':
             if (lex.peekAt(1) == '=')
@@ -264,6 +283,7 @@ namespace
                 len = 2; // ++
             else
                 len = 1; // +
+
             break;
         case '-':
             if (lex.peekAt(1) == '=')
@@ -272,12 +292,14 @@ namespace
                 len = 2; // --
             else
                 len = 1; // -
+
             break;
         case '.':
             if (lex.startsWith("..."))
                 len = 3; // ...
             else
                 len = 1; // .
+
             break;
         case '/':
             len = (lex.peekAt(1) == '=') ? 2 : 1; // /= or /
@@ -294,6 +316,7 @@ namespace
                 len = 2; // <<
             else
                 len = 1; // <
+
             break;
         case '=':
             len = (lex.peekAt(1) == '=') ? 2 : 1; // == or =
@@ -311,6 +334,7 @@ namespace
                 len = 2; // >>
             else
                 len = 1; // >
+
             break;
         case '^':
             if (lex.peekAt(1) == '=')
@@ -319,6 +343,7 @@ namespace
                 len = 2; // ^^
             else
                 len = 1; // ^
+
             break;
         case '|':
             if (lex.peekAt(1) == '=')
@@ -327,6 +352,7 @@ namespace
                 len = 2; // ||
             else
                 len = 1; // |
+
             break;
         default:
             break;
@@ -376,8 +402,11 @@ namespace light_angel
 
             LexicalToken token;
             if (tryLexNumber(lex, token)) return token;
+
             if (tryLexString(lex, token)) return token;
+
             if (tryLexPunctuator(lex, token)) return token;
+
             if (tryLexName(lex, token)) return token;
 
             // Unknown character — skip
