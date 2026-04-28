@@ -62,6 +62,21 @@ static void testParseOk()
     EXPECT_PARSE_OK("void foo(void) {}");
     EXPECT_PARSE_OK("typedef int MyInt;");
     EXPECT_PARSE_OK("using namespace Foo;");
+    EXPECT_PARSE_OK(R"(
+        void f() {
+            // This is a comment
+            array<array<int>> my_array;
+            my_array[0].push_back((1 >> 4) >>> 1);
+            my_array[0][0] >>>= 123;
+        }
+    )");
+    EXPECT_PARSE_OK(R"(
+        void f() {
+            array<array<array<int>>> array3d(123);
+            array<array<array<array<int>>>> array4d(123);
+            array<array<array<array<array<int>>>>> array5d(123);
+        }
+    )");
 }
 
 // -----------------------------------------------

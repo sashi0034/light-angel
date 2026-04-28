@@ -87,6 +87,22 @@ namespace light_angel
             return false;
         }
 
+        /// @brief Returns true if the current token is a Punctuator starting with '>'.
+        /// @details Covers '>', '>>', '>>>', '>>>>', '>>=', '>>>=', etc.
+        bool canConsumeGt(uint32_t step = 0) const
+        {
+            if (peekKind(step) != TokenKind::Punctuator) return false;
+
+            str_view text = peekText(step);
+            return !text.empty() && text[0] == '>';
+        }
+
+        /// @brief Consumes exactly one '>' from the front of the current token.
+        /// @details If the token is a multi-char '>…' (e.g., '>>'), it is split:
+        /// the current token becomes '>' and the remainder is inserted as
+        /// the next token, then the cursor advances past the single '>'.
+        void consumeOneGt();
+
         void advanceError()
         {
             ++errorCount;

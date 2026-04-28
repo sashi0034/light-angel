@@ -35,6 +35,23 @@ namespace light_angel
         }
     }
 
+    void ParserContext::consumeOneGt()
+    {
+        ensureAhead(0);
+        LexicalToken& token = m_tokens[m_cursor];
+        SourceSpan span = token.view.span();
+        if (span.length > 1)
+        {
+            token = LexicalToken{TokenKind::Punctuator, TokenView{SourceSpan{span.offset, 1}}};
+            m_tokens.insert(
+                m_tokens.begin() + m_cursor + 1,
+                LexicalToken{TokenKind::Punctuator, TokenView{SourceSpan{span.offset + 1, span.length - 1}}}
+            );
+        }
+
+        advance();
+    }
+
     ParserContext& GetActiveParser()
     {
         return *g_activeContextPtr;

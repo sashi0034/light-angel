@@ -200,9 +200,9 @@ namespace
 
             out.push_back(std::move(type));
 
-            if (ctx.check(">"))
+            if (ctx.canConsumeGt())
             {
-                ctx.advance();
+                ctx.consumeOneGt();
                 return true;
             }
 
