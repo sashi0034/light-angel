@@ -77,6 +77,16 @@ static void testParseOk()
             array<array<array<array<array<int>>>>> array5d(123);
         }
     )");
+    EXPECT_PARSE_OK(R"(
+        bool is_null(const Obj@ const handle) {
+            if (handle !is null) {
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+    )");
 }
 
 // -----------------------------------------------
