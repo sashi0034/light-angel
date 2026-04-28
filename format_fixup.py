@@ -1,32 +1,18 @@
-"""Insert a blank line after control statement blocks (braced or braceless)
+"""Custom formatting fixups applied before clang-format.
 
-Before:
-    if (cond)
-    {
-        doSomething();
-    }
-    some_logic();
+Handles rules that clang-format cannot express.
 
-After:
-    if (cond)
-    {
-        doSomething();
-    }
+# Rule: blank line after control statement block
+Insert a blank line after if/else/while/for/do blocks (braced or braceless),
+unless the next line is already blank or starts with 'else'.
 
-    some_logic(); // ↑ a blank line was inserted
+  if (cond) return false;    ->  if (cond) return false;
+  next_stmt();                   (blank)
+                                 next_stmt();
 
-Also handles braceless bodies:
-
-Before:
-    if (cond)
-        doSomething();
-    some_logic();
-
-After:
-    if (cond)
-        doSomething();
-
-    some_logic(); // ↑ a blank line was inserted
+  if (cond) { ... }          ->  if (cond) { ... }
+  next_stmt();                   (blank)
+                                 next_stmt();
 """
 
 import os
