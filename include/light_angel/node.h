@@ -31,7 +31,7 @@ namespace light_angel
     };
 
     // 'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'
-    struct FuncAttr
+    struct FunctionAttribute
     {
         uint8_t flags = 0;
 
@@ -217,7 +217,7 @@ namespace light_angel
     // **BNF** ENUM ::= {'shared' | 'external'} 'enum' IDENTIFIER [ ':' ('int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64') ] (';' | ('{' IDENTIFIER ['=' EXPR] {',' IDENTIFIER ['=' EXPR]} '}'))
     struct Node_Enum final : NodeBase
     {
-        struct EnumValue
+        struct Value
         {
             TokenView name;
             std::unique_ptr<Node_Expr> expr; // null = no value
@@ -229,13 +229,13 @@ namespace light_angel
         TokenView identifier;
         TokenView baseType; // empty = not specified
         bool isForwardDecl = false;
-        std::vector<EnumValue> values;
+        std::vector<Value> values;
     };
 
     // **BNF** CLASS ::= ['mixin'] {'shared' | 'abstract' | 'final' | 'external'} 'class' IDENTIFIER (';' | ([':' SCOPE IDENTIFIER {',' SCOPE IDENTIFIER}] '{' {VIRTUALPROP | FUNC | VAR | FUNCDEF} '}'))
     struct Node_Class final : NodeBase
     {
-        struct BaseClass
+        struct Base
         {
             std::unique_ptr<Node_Scope> scope;
             TokenView identifier;
@@ -246,7 +246,7 @@ namespace light_angel
         EntityAttribute attr;
         TokenView identifier;
         bool isForwardDecl = false;
-        std::vector<BaseClass> bases;
+        std::vector<Base> bases;
         std::vector<std::unique_ptr<NodeBase>> members;
     };
 
@@ -274,7 +274,7 @@ namespace light_angel
         std::unique_ptr<Node_ParamList> params;
         std::unique_ptr<Node_ListPattern> listPattern;
         bool isConst = false;
-        FuncAttr funcAttr;
+        FunctionAttribute funcAttr;
         std::unique_ptr<Node_StatBlock> body; // null = ';'
     };
 
@@ -294,8 +294,8 @@ namespace light_angel
     {
         enum class Kind
         {
-            RepeatSub, // 'repeat'|'repeat_same' '{' LISTENTRY '}'
-            RepeatType, // 'repeat'|'repeat_same' TYPE
+            RepeatEntry, // 'repeat' | 'repeat_same' '{' LISTENTRY '}'
+            RepeatType, // 'repeat' | 'repeat_same' TYPE
             TypeList, // TYPE {',' TYPE}
         };
 
@@ -303,7 +303,7 @@ namespace light_angel
 
         Kind entryKind = Kind::TypeList;
         bool isRepeatSame = false;
-        std::unique_ptr<Node_ListEntry> subEntry; // Kind::RepeatSub
+        std::unique_ptr<Node_ListEntry> entry; // Kind::RepeatEntry
         std::vector<std::unique_ptr<Node_Type>> types; // Kind::RepeatType / Kind::TypeList
     };
 
@@ -350,7 +350,7 @@ namespace light_angel
         bool isRef = false;
         TokenView identifier;
         std::unique_ptr<Node_ParamList> params;
-        FuncAttr funcAttr;
+        FunctionAttribute funcAttr;
         TokenView fromString;
     };
 
@@ -373,7 +373,7 @@ namespace light_angel
         {
             bool isGet = true;
             bool isConst = false;
-            FuncAttr attr;
+            FunctionAttribute attr;
             std::unique_ptr<Node_StatBlock> body; // null = ';'
         };
 
@@ -396,7 +396,7 @@ namespace light_angel
         TokenView identifier;
         std::unique_ptr<Node_ParamList> params;
         bool isConst = false;
-        FuncAttr funcAttr;
+        FunctionAttribute funcAttr;
     };
 
     // **BNF** STATBLOCK ::= '{' {VAR | STATEMENT | USING} '}'

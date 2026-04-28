@@ -17,7 +17,7 @@ namespace
     std::unique_ptr<Node_Class> parseClass(ParserContext& ctx);
     std::unique_ptr<Node_TypeDef> parseTypeDef(ParserContext& ctx);
     std::unique_ptr<Node_Func> parseFunc(ParserContext& ctx);
-    FuncAttr parseFuncAttr(ParserContext& ctx);
+    FunctionAttribute parseFuncAttr(ParserContext& ctx);
     std::unique_ptr<Node_ListPattern> parseListPattern(ParserContext& ctx);
     std::unique_ptr<Node_ListEntry> parseListEntry(ParserContext& ctx);
     std::unique_ptr<Node_Interface> parseInterface(ParserContext& ctx);
@@ -465,7 +465,7 @@ namespace
 
             if (!ctx.checkKind(TokenKind::Name)) break;
 
-            Node_Enum::EnumValue ev;
+            Node_Enum::Value ev;
             ev.name = ctx.consumeView();
             if (ctx.check("="))
             {
@@ -542,7 +542,7 @@ namespace
                 }
 
                 first = false;
-                Node_Class::BaseClass b;
+                Node_Class::Base b;
                 b.scope = parseScope(ctx);
                 if (ctx.checkKind(TokenKind::Name)) b.identifier = ctx.consumeView();
 
@@ -689,40 +689,40 @@ namespace
     }
 
     // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
-    FuncAttr parseFuncAttr(ParserContext& ctx)
+    FunctionAttribute parseFuncAttr(ParserContext& ctx)
     {
-        FuncAttr attr;
+        FunctionAttribute attr;
         while (!ctx.isEnd())
         {
             str_view t = ctx.peekText();
             if (t == "override")
             {
-                attr.flags |= FuncAttr::Override;
+                attr.flags |= FunctionAttribute::Override;
                 ctx.advance();
             }
             else if (t == "final")
             {
-                attr.flags |= FuncAttr::Final;
+                attr.flags |= FunctionAttribute::Final;
                 ctx.advance();
             }
             else if (t == "explicit")
             {
-                attr.flags |= FuncAttr::Explicit;
+                attr.flags |= FunctionAttribute::Explicit;
                 ctx.advance();
             }
             else if (t == "property")
             {
-                attr.flags |= FuncAttr::Property;
+                attr.flags |= FunctionAttribute::Property;
                 ctx.advance();
             }
             else if (t == "delete")
             {
-                attr.flags |= FuncAttr::Delete;
+                attr.flags |= FunctionAttribute::Delete;
                 ctx.advance();
             }
             else if (t == "nodiscard")
             {
-                attr.flags |= FuncAttr::Nodiscard;
+                attr.flags |= FunctionAttribute::Nodiscard;
                 ctx.advance();
             }
             else
@@ -799,8 +799,8 @@ namespace
             if (ctx.check("{"))
             {
                 ctx.advance();
-                node->entryKind = Node_ListEntry::Kind::RepeatSub;
-                node->subEntry = parseListEntry(ctx);
+                node->entryKind = Node_ListEntry::Kind::RepeatEntry;
+                node->entry = parseListEntry(ctx);
                 expectToken(ctx, "}");
             }
             else
