@@ -391,6 +391,13 @@ namespace light_angel
             if (lex.isEnd())
                 return LexicalToken{TokenKind::EndOfFile, TokenView{SourceSpan{lex.offset(), 0}}};
 
+            static constexpr str_view bom = "\xEF\xBB\xBF";
+            if (lex.startsWith(bom))
+            {
+                lex.advance(bom.length());
+                continue;
+            }
+
             if (lex.isNextWhitespace())
             {
                 lex.advance();

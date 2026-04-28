@@ -45,7 +45,9 @@ namespace
 static void testParseOk()
 {
     EXPECT_PARSE_OK("");
+    EXPECT_PARSE_OK("\xEF\xBB\xBF" "");
     EXPECT_PARSE_OK(";");
+    EXPECT_PARSE_OK("\xEF\xBB\xBF" "void foo() {}");
     EXPECT_PARSE_OK("void foo() {}");
     EXPECT_PARSE_OK("int foo() { return 1; }");
     EXPECT_PARSE_OK("int x = 1;");

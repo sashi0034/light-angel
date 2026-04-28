@@ -52,7 +52,7 @@ namespace light_angel
         bool isNextWhitespace() const
         {
             char_t c = peek();
-            return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+            return c == ' ' || c == '\t';
         }
 
         void advance(uint32_t count = 1)
