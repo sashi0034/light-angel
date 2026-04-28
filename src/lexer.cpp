@@ -398,7 +398,7 @@ namespace light_angel
                 continue;
             }
 
-            if (lex.isNextWhitespace())
+            if (lex.isNextWhitespace() || lex.isNextLineBreak())
             {
                 lex.advance();
                 continue;
