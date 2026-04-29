@@ -217,7 +217,7 @@ namespace light_angel
     // **BNF** ENUM ::= {'shared' | 'external'} 'enum' IDENTIFIER [ ':' ('int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64') ] (';' | ('{' IDENTIFIER ['=' EXPR] {',' IDENTIFIER ['=' EXPR]} '}'))
     struct Node_Enum final : NodeBase
     {
-        struct Value
+        struct Declaration
         {
             TokenView name;
             std::unique_ptr<Node_Expr> expr; // null = no value
@@ -229,13 +229,13 @@ namespace light_angel
         TokenView identifier;
         TokenView baseType; // empty = not specified
         bool isForwardDecl = false;
-        std::vector<Value> values;
+        std::vector<Declaration> values;
     };
 
     // **BNF** CLASS ::= ['mixin'] {'shared' | 'abstract' | 'final' | 'external'} 'class' IDENTIFIER (';' | ([':' SCOPE IDENTIFIER {',' SCOPE IDENTIFIER}] '{' {VIRTUALPROP | FUNC | VAR | FUNCDEF} '}'))
     struct Node_Class final : NodeBase
     {
-        struct Base
+        struct BaseSpecifier
         {
             std::unique_ptr<Node_Scope> scope;
             TokenView identifier;
@@ -246,7 +246,7 @@ namespace light_angel
         EntityAttribute attr;
         TokenView identifier;
         bool isForwardDecl = false;
-        std::vector<Base> bases;
+        std::vector<BaseSpecifier> bases;
         std::vector<std::unique_ptr<NodeBase>> members;
     };
 
@@ -310,7 +310,7 @@ namespace light_angel
     // **BNF** INTERFACE ::= {'external' | 'shared'} 'interface' IDENTIFIER (';' | ([':' SCOPE IDENTIFIER {',' SCOPE IDENTIFIER}] '{' {VIRTUALPROP | INTERFACEMETHOD} '}'))
     struct Node_Interface final : NodeBase
     {
-        struct BaseInterface
+        struct BaseSpecifier
         {
             std::unique_ptr<Node_Scope> scope;
             TokenView identifier;
@@ -321,14 +321,14 @@ namespace light_angel
         EntityAttribute attr;
         TokenView identifier;
         bool isForwardDecl = false;
-        std::vector<BaseInterface> bases;
+        std::vector<BaseSpecifier> bases;
         std::vector<std::unique_ptr<NodeBase>> members;
     };
 
     // **BNF** VAR ::= ['private' | 'protected'] TYPE IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST] {',' IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST]} ';'
     struct Node_Var final : NodeBase
     {
-        struct VarDecl
+        struct Declaration
         {
             TokenView identifier;
             std::unique_ptr<NodeBase> init; // Node_InitList | Node_Assign | Node_ArgList | null
@@ -338,7 +338,7 @@ namespace light_angel
 
         std::optional<AccessModifier> access;
         std::unique_ptr<Node_Type> type;
-        std::vector<VarDecl> decls;
+        std::vector<Declaration> decls;
     };
 
     // **BNF** IMPORT ::= 'import' TYPE ['&'] IDENTIFIER PARAMLIST FUNCATTR 'from' STRING ';'

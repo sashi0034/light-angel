@@ -465,7 +465,7 @@ namespace
 
             if (!ctx.checkKind(TokenKind::Name)) break;
 
-            Node_Enum::Value ev;
+            Node_Enum::Declaration ev;
             ev.name = ctx.consumeView();
             if (ctx.check("="))
             {
@@ -542,7 +542,7 @@ namespace
                 }
 
                 first = false;
-                Node_Class::Base b;
+                Node_Class::BaseSpecifier b;
                 b.scope = parseScope(ctx);
                 if (ctx.checkKind(TokenKind::Name)) b.identifier = ctx.consumeView();
 
@@ -888,7 +888,7 @@ namespace
                 }
 
                 first = false;
-                Node_Interface::BaseInterface b;
+                Node_Interface::BaseSpecifier b;
                 b.scope = parseScope(ctx);
                 if (ctx.checkKind(TokenKind::Name)) b.identifier = ctx.consumeView();
 
@@ -959,7 +959,7 @@ namespace
 
             if (!ctx.checkKind(TokenKind::Name)) break;
 
-            Node_Var::VarDecl decl;
+            Node_Var::Declaration decl;
             decl.identifier = ctx.consumeView();
 
             if (ctx.check("="))
