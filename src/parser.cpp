@@ -1964,7 +1964,7 @@ namespace
         return node;
     }
 
-    // **BNF** EXPRVALUE ::= 'void' | CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
+    // **BNF** EXPRVALUE ::= CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
     std::unique_ptr<NodeBase> parseExprValue(ParserContext& ctx)
     {
         if (ctx.check("void"))
@@ -2164,14 +2164,14 @@ namespace
         return node;
     }
 
-    // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null'
+    // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null' | 'void'
     std::unique_ptr<Node_Literal> parseLiteral(ParserContext& ctx)
     {
         const uint32_t start = ctx.save();
         if (ctx.checkKind(TokenKind::Number) || ctx.checkKind(TokenKind::String) ||
             ctx.checkKind(TokenKind::Bits) || ctx.check("true") ||
 
-            ctx.check("false") || ctx.check("null"))
+            ctx.check("false") || ctx.check("null") || ctx.check("void"))
         {
             auto token = ctx.consumeView();
             auto node = std::make_unique<Node_Literal>(ctx.spanFrom(start));

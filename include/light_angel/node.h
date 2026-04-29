@@ -479,9 +479,6 @@ namespace light_angel
     // **BNF** PRIMITIVETYPE ::= 'void' | 'int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64' | 'float' | 'double' | 'bool'
     // n/a
 
-    // **BNF** FUNCATTR ::= {'override' | 'final' | 'explicit' | 'property' | 'delete' | 'nodiscard'}
-    // n/a
-
     // **BNF** STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
     struct Node_Statement final : NodeBase
     {
@@ -636,7 +633,7 @@ namespace light_angel
         std::vector<std::unique_ptr<Node_ExprPostOp>> postOps;
     };
 
-    // **BNF** EXPRVALUE ::= 'void' | CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
+    // **BNF** EXPRVALUE ::= CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
     struct Node_ExprValue final : NodeBase
     {
         explicit Node_ExprValue(SourceSpan span = {}) : NodeBase(NodeKind::ExprValue, span) {}
@@ -711,7 +708,7 @@ namespace light_angel
         TokenView identifier;
     };
 
-    // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null'
+    // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null' | 'void'
     struct Node_Literal final : NodeBase
     {
         explicit Node_Literal(SourceSpan span = {}) : NodeBase(NodeKind::Literal, span) {}
