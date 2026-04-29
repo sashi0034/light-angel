@@ -142,6 +142,8 @@ static void testParseError()
     EXPECT_PARSE_ERROR("void 123() {}");
     EXPECT_PARSE_ERROR("void test() { value = ; }");
     EXPECT_PARSE_ERROR("void foo(");
+    EXPECT_PARSE_ERROR("class Foo { int value { get; get; } }");
+    EXPECT_PARSE_ERROR("class Foo { int value { set; set; } }");
 }
 
 void runParserTests()

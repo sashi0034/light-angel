@@ -1106,7 +1106,10 @@ namespace
 
         ctx.advance();
 
-        std::vector<Node_VirtualProp::Accessor> accessors;
+        Node_VirtualProp::Accessor getter;
+        Node_VirtualProp::Accessor setter;
+        bool hasGetter = false;
+        bool hasSetter = false;
         while (!ctx.isEnd() && !ctx.check("}"))
         {
             if (!ctx.check("get") && !ctx.check("set"))
@@ -1115,8 +1118,9 @@ namespace
                 continue;
             }
 
+            const bool isGet = ctx.check("get");
+            const SourceSpan accessorSpan = ctx.peek().view.span();
             Node_VirtualProp::Accessor acc;
-            acc.isGet = ctx.check("get");
             ctx.advance();
             acc.isConst = ctx.consume("const");
             acc.attr = parseFuncAttr(ctx);
@@ -1129,7 +1133,26 @@ namespace
                 acc.body = parseStatBlock(ctx);
             }
 
-            accessors.push_back(std::move(acc));
+            if (isGet)
+            {
+                if (hasGetter)
+                    ctx.reportError(accessorSpan, "duplicate virtual property getter");
+                else
+                {
+                    getter = std::move(acc);
+                    hasGetter = true;
+                }
+            }
+            else
+            {
+                if (hasSetter)
+                    ctx.reportError(accessorSpan, "duplicate virtual property setter");
+                else
+                {
+                    setter = std::move(acc);
+                    hasSetter = true;
+                }
+            }
         }
 
         expectToken(ctx, "}");
@@ -1139,7 +1162,8 @@ namespace
         node->type = std::move(type);
         node->isRef = isRef;
         node->identifier = identifier;
-        node->accessors = std::move(accessors);
+        node->getter = std::move(getter);
+        node->setter = std::move(setter);
         return node;
     }
 
@@ -1239,7 +1263,6 @@ namespace
         {
             ctx.advance();
             ctx.advance();
-            node->isVoid = true;
             node->span = ctx.spanFrom(start);
             return node;
         }
@@ -1308,7 +1331,7 @@ namespace
         node->typeModifier = mod;
         node->identifier = identifier;
         node->isVariadic = isVariadic;
-        node->hasVoidDefault = hasVoidDefault;
+        node->isOptionalOutput = hasVoidDefault;
         node->defaultExpr = std::move(defaultExpr);
         return node;
     }
@@ -1380,7 +1403,7 @@ namespace
             {
                 ctx.advance();
                 ctx.advance();
-                postfixes.push_back({Node_Type::PostfixKind::Array});
+                postfixes.push_back(Node_Type::Postfix::Array);
             }
             else if (ctx.check("@"))
             {
@@ -1390,11 +1413,11 @@ namespace
                 if (ctx.check("const"))
                 {
                     ctx.advance();
-                    postfixes.push_back({Node_Type::PostfixKind::HandleConst});
+                    postfixes.push_back(Node_Type::Postfix::ConstHandle);
                 }
                 else
                 {
-                    postfixes.push_back({Node_Type::PostfixKind::Handle});
+                    postfixes.push_back(Node_Type::Postfix::Handle);
                 }
             }
             else
@@ -1465,16 +1488,15 @@ namespace
             isGlobal = true;
         }
 
-        std::vector<Node_Scope::ScopePart> parts;
+        std::vector<TokenView> identifiers;
+        std::vector<std::unique_ptr<Node_Type>> templateArgs;
 
         while (!ctx.isEnd() && ctx.checkKind(TokenKind::Name))
         {
             if (ctx.check("::", 1))
             {
-                Node_Scope::ScopePart part;
-                part.identifier = ctx.consumeView();
+                identifiers.push_back(ctx.consumeView());
                 ctx.advance();
-                parts.push_back(std::move(part));
                 continue;
             }
 
@@ -1486,10 +1508,8 @@ namespace
                 if (parseTemplateTypeArgs(ctx, args) && ctx.check("::"))
                 {
                     ctx.advance();
-                    Node_Scope::ScopePart part;
-                    part.identifier = identTok;
-                    part.templateArgs = std::move(args);
-                    parts.push_back(std::move(part));
+                    identifiers.push_back(identTok);
+                    templateArgs = std::move(args);
                     continue;
                 }
 
@@ -1499,11 +1519,12 @@ namespace
             break;
         }
 
-        if (!isGlobal && parts.empty()) return nullptr;
+        if (!isGlobal && identifiers.empty()) return nullptr;
 
         auto node = std::make_unique<Node_Scope>(ctx.spanFrom(start));
         node->isGlobal = isGlobal;
-        node->parts = std::move(parts);
+        node->identifiers = std::move(identifiers);
+        node->templateArgs = std::move(templateArgs);
         return node;
     }
 
@@ -1615,13 +1636,13 @@ namespace
         auto node = std::make_unique<Node_For>();
 
         if (auto v = parseVar(ctx))
-            node->init = std::move(v);
+            node->initializer = std::move(v);
         else if (auto es = parseExprStat(ctx))
-            node->init = std::move(es);
+            node->initializer = std::move(es);
         else
             return nullptr;
 
-        node->cond = parseExprStat(ctx);
+        node->condition = parseExprStat(ctx);
 
         bool first = true;
         while (!ctx.isEnd() && !ctx.check(")"))
@@ -1637,7 +1658,7 @@ namespace
             auto assign = parseAssign(ctx);
             if (!assign) break;
 
-            node->incs.push_back(std::move(assign));
+            node->increments.push_back(std::move(assign));
         }
 
         expectToken(ctx, ")");
@@ -1670,7 +1691,7 @@ namespace
 
             first = false;
 
-            Node_ForEach::IterVar v;
+            Node_ForEach::VarDecl v;
             v.type = parseType(ctx);
             if (!v.type) break;
 
@@ -1697,13 +1718,13 @@ namespace
 
         if (!expectToken(ctx, "(")) return nullptr;
 
-        auto cond = parseAssign(ctx);
-        if (!cond) return nullptr;
+        auto condition = parseAssign(ctx);
+        if (!condition) return nullptr;
 
         if (!expectToken(ctx, ")")) return nullptr;
 
         auto node = std::make_unique<Node_While>();
-        node->cond = std::move(cond);
+        node->condition = std::move(condition);
         node->body = parseStatement(ctx);
         node->span = ctx.spanFrom(start);
         return node;
@@ -1723,7 +1744,7 @@ namespace
 
         if (!expectToken(ctx, "(")) return nullptr;
 
-        node->cond = parseAssign(ctx);
+        node->condition = parseAssign(ctx);
         expectToken(ctx, ")");
         expectToken(ctx, ";");
         node->span = ctx.spanFrom(start);
@@ -1740,13 +1761,13 @@ namespace
 
         if (!expectToken(ctx, "(")) return nullptr;
 
-        auto cond = parseAssign(ctx);
-        if (!cond) return nullptr;
+        auto condition = parseAssign(ctx);
+        if (!condition) return nullptr;
 
         if (!expectToken(ctx, ")")) return nullptr;
 
         auto node = std::make_unique<Node_If>();
-        node->cond = std::move(cond);
+        node->condition = std::move(condition);
         node->thenBranch = parseStatement(ctx);
 
         if (ctx.check("else"))
@@ -2012,7 +2033,7 @@ namespace
             ctx.advance();
             node->opKind = Node_ExprPostOp::Kind::Member;
             if (auto fc = parseFuncCall(ctx))
-                node->dotAccess = std::move(fc);
+                node->memberAccess = std::move(fc);
             else if (ctx.checkKind(TokenKind::Name))
                 node->dotIdentifier = ctx.consumeView();
             else
@@ -2034,7 +2055,7 @@ namespace
 
                 first = false;
 
-                Node_ExprPostOp::IndexArg arg;
+                Node_ExprPostOp::SubscriptArg arg;
                 if (ctx.checkKind(TokenKind::Name) && ctx.check(":", 1))
                 {
                     arg.name = ctx.consumeView();
@@ -2042,7 +2063,7 @@ namespace
                 }
 
                 arg.value = parseAssign(ctx);
-                node->indexArgs.push_back(std::move(arg));
+                node->subscriptArgs.push_back(std::move(arg));
             }
 
             expectToken(ctx, "]");
@@ -2240,8 +2261,8 @@ namespace
     std::unique_ptr<Node_Assign> parseAssign(ParserContext& ctx)
     {
         const uint32_t start = ctx.save();
-        auto cond = parseCondition(ctx);
-        if (!cond) return nullptr;
+        auto condition = parseCondition(ctx);
+        if (!condition) return nullptr;
 
         if (!ctx.isEnd() && isAssignOp(ctx.peekText()))
         {
@@ -2252,14 +2273,14 @@ namespace
                 ctx.reportError(ctx.peek().view.span(), "expected expression after operator");
 
             auto node = std::make_unique<Node_Assign>(ctx.spanFrom(start));
-            node->cond = std::move(cond);
+            node->condition = std::move(condition);
             node->op = op;
             node->rhs = std::move(rhs);
             return node;
         }
 
         auto node = std::make_unique<Node_Assign>(ctx.spanFrom(start));
-        node->cond = std::move(cond);
+        node->condition = std::move(condition);
         return node;
     }
 

@@ -371,7 +371,6 @@ namespace light_angel
     {
         struct Accessor
         {
-            bool isGet = true;
             bool isConst = false;
             FunctionAttribute attr;
             std::unique_ptr<Node_StatBlock> body; // null = ';'
@@ -383,7 +382,8 @@ namespace light_angel
         std::unique_ptr<Node_Type> type;
         bool isRef = false;
         TokenView identifier;
-        std::vector<Accessor> accessors;
+        Accessor getter;
+        Accessor setter;
     };
 
     // **BNF** INTERFACEMETHOD ::= TYPE ['&'] IDENTIFIER PARAMLIST ['const'] FUNCATTR ';'
@@ -412,7 +412,6 @@ namespace light_angel
     {
         explicit Node_ParamList(SourceSpan span = {}) : NodeBase(NodeKind::ParamList, span) {}
 
-        bool isVoid = false;
         std::vector<std::unique_ptr<Node_Parameter>> params;
     };
 
@@ -425,7 +424,7 @@ namespace light_angel
         TypeModifier typeModifier;
         TokenView identifier;
         bool isVariadic = false;
-        bool hasVoidDefault = false;
+        bool isOptionalOutput = false; // true if '= void' is used, indicating an optional output parameter
         std::unique_ptr<Node_Expr> defaultExpr; // null = no default value
     };
 
@@ -435,17 +434,11 @@ namespace light_angel
     // **BNF** TYPE ::= ['const'] SCOPE DATATYPE ['<' TYPE {',' TYPE} '>'] { ('[' ']') | ('@' ['const']) }
     struct Node_Type final : NodeBase
     {
-        // '[' ']' → Array, '@' → Handle, '@' 'const' → HandleConst
-        enum class PostfixKind
+        enum class Postfix
         {
-            Array,
-            Handle,
-            HandleConst
-        };
-
-        struct Postfix
-        {
-            PostfixKind kind;
+            Array, // '[' ']'
+            Handle, // '@'
+            ConstHandle // '@' 'const'
         };
 
         explicit Node_Type(SourceSpan span = {}) : NodeBase(NodeKind::Type, span) {}
@@ -468,17 +461,11 @@ namespace light_angel
     // **BNF** SCOPE ::= ['::'] {IDENTIFIER '::'} [IDENTIFIER ['<' TYPE {',' TYPE} '>'] '::']
     struct Node_Scope final : NodeBase
     {
-        // Each identifier segment; only the last qualified segment may have template args
-        struct ScopePart
-        {
-            TokenView identifier;
-            std::vector<std::unique_ptr<Node_Type>> templateArgs;
-        };
-
         explicit Node_Scope(SourceSpan span = {}) : NodeBase(NodeKind::Scope, span) {}
 
         bool isGlobal = false;
-        std::vector<ScopePart> parts;
+        std::vector<TokenView> identifiers; // includes the one before '::' if present
+        std::vector<std::unique_ptr<Node_Type>> templateArgs; // for the last identifier
     };
 
     // **BNF** DATATYPE ::= (IDENTIFIER | PRIMITIVETYPE | '?' | 'auto')
@@ -523,16 +510,16 @@ namespace light_angel
     {
         explicit Node_For(SourceSpan span = {}) : NodeBase(NodeKind::For, span) {}
 
-        std::unique_ptr<NodeBase> init; // Node_Var or Node_ExprStat
-        std::unique_ptr<Node_ExprStat> cond;
-        std::vector<std::unique_ptr<Node_Assign>> incs;
+        std::unique_ptr<NodeBase> initializer; // Node_Var or Node_ExprStat
+        std::unique_ptr<Node_ExprStat> condition;
+        std::vector<std::unique_ptr<Node_Assign>> increments;
         std::unique_ptr<NodeBase> body;
     };
 
     // **BNF** FOREACH ::= 'foreach' '(' TYPE IDENTIFIER {',' TYPE IDENTIFIER} ':' ASSIGN ')' STATEMENT
     struct Node_ForEach final : NodeBase
     {
-        struct IterVar
+        struct VarDecl
         {
             std::unique_ptr<Node_Type> type;
             TokenView identifier;
@@ -540,7 +527,7 @@ namespace light_angel
 
         explicit Node_ForEach(SourceSpan span = {}) : NodeBase(NodeKind::ForEach, span) {}
 
-        std::vector<IterVar> vars;
+        std::vector<VarDecl> vars;
         std::unique_ptr<Node_Assign> range;
         std::unique_ptr<NodeBase> body;
     };
@@ -550,7 +537,7 @@ namespace light_angel
     {
         explicit Node_While(SourceSpan span = {}) : NodeBase(NodeKind::While, span) {}
 
-        std::unique_ptr<Node_Assign> cond;
+        std::unique_ptr<Node_Assign> condition;
         std::unique_ptr<NodeBase> body;
     };
 
@@ -560,7 +547,7 @@ namespace light_angel
         explicit Node_DoWhile(SourceSpan span = {}) : NodeBase(NodeKind::DoWhile, span) {}
 
         std::unique_ptr<NodeBase> body;
-        std::unique_ptr<Node_Assign> cond;
+        std::unique_ptr<Node_Assign> condition;
     };
 
     // **BNF** IF ::= 'if' '(' ASSIGN ')' STATEMENT ['else' STATEMENT]
@@ -568,7 +555,7 @@ namespace light_angel
     {
         explicit Node_If(SourceSpan span = {}) : NodeBase(NodeKind::If, span) {}
 
-        std::unique_ptr<Node_Assign> cond;
+        std::unique_ptr<Node_Assign> condition;
         std::unique_ptr<NodeBase> thenBranch;
         std::unique_ptr<NodeBase> elseBranch; // null = no else
     };
@@ -681,7 +668,7 @@ namespace light_angel
             Decrement, // '--'
         };
 
-        struct IndexArg
+        struct SubscriptArg
         {
             TokenView name; // empty = positional argument
             std::unique_ptr<Node_Assign> value;
@@ -690,10 +677,9 @@ namespace light_angel
         explicit Node_ExprPostOp(SourceSpan span = {}) : NodeBase(NodeKind::ExprPostOp, span) {}
 
         Kind opKind = Kind::Member;
-        // Kind::Dot — dotAccess holds Node_FuncCall for FUNCCALL, dotIdentifier holds the name for IDENTIFIER
-        std::unique_ptr<NodeBase> dotAccess;
+        std::unique_ptr<NodeBase> memberAccess;
         TokenView dotIdentifier;
-        std::vector<IndexArg> indexArgs; // Kind::Subscript
+        std::vector<SubscriptArg> subscriptArgs; // Kind::Subscript
         std::unique_ptr<Node_ArgList> callArgs; // Kind::Call
     };
 
@@ -772,7 +758,7 @@ namespace light_angel
     {
         explicit Node_Assign(SourceSpan span = {}) : NodeBase(NodeKind::Assign, span) {}
 
-        std::unique_ptr<Node_Condition> cond;
+        std::unique_ptr<Node_Condition> condition;
         TokenView op; // empty = no operator
         std::unique_ptr<Node_Assign> rhs; // null = no rhs
     };
