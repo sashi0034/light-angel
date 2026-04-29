@@ -107,9 +107,15 @@ namespace light_angel
 
         void reportError(SourceSpan span, str_view message);
 
-        const std::vector<Diagnostic>& diagnostics() const { return m_diagnostics; }
+        const std::vector<Diagnostic>& diagnostics() const
+        {
+            return m_diagnostics;
+        }
 
-        std::vector<Diagnostic> takeDiagnostics() { return std::move(m_diagnostics); }
+        std::vector<Diagnostic> takeDiagnostics()
+        {
+            return std::move(m_diagnostics);
+        }
 
         /// @brief Returns the span covering tokens from startCursor up to (but not including) cursor.
         SourceSpan spanFrom(uint32_t startCursor) const

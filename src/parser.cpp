@@ -64,6 +64,7 @@ namespace
 
     // -----------------------------------------------
     // Helpers
+    // -----------------------------------------------
 
     bool isPrimType(str_view s)
     {
@@ -2341,6 +2342,7 @@ namespace
         {
             auto pos = source.find('\n', lineStart);
             if (pos == light_angel::str_view::npos) return {};
+
             lineStart = pos + 1;
             ++curLine;
         }
