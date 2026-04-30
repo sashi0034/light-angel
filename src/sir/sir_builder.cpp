@@ -44,10 +44,18 @@ namespace light_angel
         m_module.voidType = add(SirTypeKind::Void, "void");
         m_module.boolType = add(SirTypeKind::Bool, "bool");
         m_module.intType = add(SirTypeKind::Int, "int");
+        m_module.int8Type = add(SirTypeKind::Int8, "int8");
+        m_module.int16Type = add(SirTypeKind::Int16, "int16");
+        m_module.int32Type = add(SirTypeKind::Int32, "int32");
+        m_module.int64Type = add(SirTypeKind::Int64, "int64");
         m_module.uintType = add(SirTypeKind::UInt, "uint");
+        m_module.uint8Type = add(SirTypeKind::UInt8, "uint8");
+        m_module.uint16Type = add(SirTypeKind::UInt16, "uint16");
+        m_module.uint32Type = add(SirTypeKind::UInt32, "uint32");
+        m_module.uint64Type = add(SirTypeKind::UInt64, "uint64");
         m_module.floatType = add(SirTypeKind::Float, "float");
         m_module.doubleType = add(SirTypeKind::Double, "double");
-        m_module.stringType = add(SirTypeKind::String, "string");
+        m_module.stringType = add(SirTypeKind::NativeType, "string");
         m_module.nullType = add(SirTypeKind::Null, "null_t");
     }
 
@@ -57,11 +65,17 @@ namespace light_angel
 
         if (kw == "bool") return m_module.boolType;
 
-        if (kw == "int" || kw == "int8" || kw == "int16" || kw == "int32" || kw == "int64")
-            return m_module.intType;
+        if (kw == "int") return m_module.intType;
+        if (kw == "int8") return m_module.int8Type;
+        if (kw == "int16") return m_module.int16Type;
+        if (kw == "int32") return m_module.int32Type;
+        if (kw == "int64") return m_module.int64Type;
 
-        if (kw == "uint" || kw == "uint8" || kw == "uint16" || kw == "uint32" || kw == "uint64")
-            return m_module.uintType;
+        if (kw == "uint") return m_module.uintType;
+        if (kw == "uint8") return m_module.uint8Type;
+        if (kw == "uint16") return m_module.uint16Type;
+        if (kw == "uint32") return m_module.uint32Type;
+        if (kw == "uint64") return m_module.uint64Type;
 
         if (kw == "float") return m_module.floatType;
 
@@ -328,8 +342,10 @@ namespace light_angel
         SirTypeInfo ftype;
         ftype.kind = SirTypeKind::Function;
         ftype.name = sf.name;
-        ftype.returnType = sf.returnType;
-        ftype.parameterTypes = paramTypes;
+        SirTypeInfo::function_props fprops;
+        fprops.returnType = sf.returnType;
+        fprops.parameterTypes = paramTypes;
+        ftype.data = std::move(fprops);
         sf.functionType = m_module.addType(std::move(ftype));
 
         // Function symbol (declared in enclosing scope BEFORE body is built so it

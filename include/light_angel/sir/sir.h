@@ -32,40 +32,86 @@ namespace light_angel
         Error,
         Void,
         Bool,
-        Int, // TODO: int8, int16, int32, int64?
+        Int,
+        Int8,
+        Int16,
+        Int32,
+        Int64,
         UInt,
+        UInt8,
+        UInt16,
+        UInt32,
+        UInt64,
         Float,
         Double,
-        String, // FIXME: Remove this?
         Null,
         Class,
         Interface,
+        Enum,
         Array, // FIXME: Remove this?
         Handle,
         Function,
-        TemplateInstance,
+        NativeType,
+        ScriptType,
     };
 
     struct SirTypeInfo
     {
+        // No payload. Used by primitive-like kinds (Error/Void/Bool/integer widths/
+        // Float/Double/Null/NativeType/ScriptType).
+        struct primitive_props
+        {
+        };
+
+        struct class_props
+        {
+            // Non-empty for generic class instantiations.
+            std::vector<SirTypeId> typeArgs;
+        };
+
+        struct interface_props
+        {
+        };
+
+        struct enum_props
+        {
+        };
+
+        struct array_props
+        {
+            SirTypeId elementType = InvalidType;
+        };
+
+        struct handle_props
+        {
+            SirTypeId elementType = InvalidType;
+            bool isConstHandle = false;
+        };
+
+        struct function_props
+        {
+            // TODO: Use SirFunctionId instead?
+            std::vector<SirTypeId> parameterTypes;
+            SirTypeId returnType = InvalidType;
+        };
+
+        using Data = std::variant<
+            primitive_props,
+            class_props,
+            interface_props,
+            enum_props,
+            array_props,
+            handle_props,
+            function_props>;
+
         SirTypeKind kind = SirTypeKind::Error;
         std::string name;
 
         SirSymbolId symbol = InvalidSymbol;
 
-        // TODO: variant
-
-        // Array / Handle / TemplateInstance
-        SirTypeId elementType = InvalidType;
-        std::vector<SirTypeId> typeArgs;
-
-        // Function type
-        // TODO: Use SirFunctionId instead?
-        std::vector<SirTypeId> parameterTypes;
-        SirTypeId returnType = InvalidType;
-
         bool isConst = false;
-        bool isConstHandle = false;
+
+        Data data = primitive_props{};
     };
 
     // -----------------------------------------------
@@ -423,7 +469,15 @@ namespace light_angel
         SirTypeId voidType = InvalidType;
         SirTypeId boolType = InvalidType;
         SirTypeId intType = InvalidType;
+        SirTypeId int8Type = InvalidType;
+        SirTypeId int16Type = InvalidType;
+        SirTypeId int32Type = InvalidType;
+        SirTypeId int64Type = InvalidType;
         SirTypeId uintType = InvalidType;
+        SirTypeId uint8Type = InvalidType;
+        SirTypeId uint16Type = InvalidType;
+        SirTypeId uint32Type = InvalidType;
+        SirTypeId uint64Type = InvalidType;
         SirTypeId floatType = InvalidType;
         SirTypeId doubleType = InvalidType;
         SirTypeId stringType = InvalidType;
