@@ -1,4 +1,4 @@
-#include "light_angel/node.h"
+#include "light_angel/parser/node.h"
 
 namespace
 {

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "light_angel/token.h"
+#include "light_angel/parser/token.h"
 
 #include <cstdint>
 

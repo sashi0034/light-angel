@@ -1,6 +1,6 @@
 #pragma once
 #include "lexer.h"
-#include "light_angel/token.h"
+#include "light_angel/parser/token.h"
 #include <vector>
 
 namespace light_angel

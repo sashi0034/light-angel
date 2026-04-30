@@ -5,7 +5,7 @@
 #include <variant>
 #include <vector>
 
-#include "token.h"
+#include "light_angel/parser/token.h"
 
 namespace light_angel
 {

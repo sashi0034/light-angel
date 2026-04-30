@@ -1,9 +1,9 @@
 #pragma once
 
-#include "light_angel/node.h"
-#include "light_angel/sir.h"
-#include "light_angel/string_type.h"
-#include "light_angel/token.h"
+#include "light_angel/parser/node.h"
+#include "light_angel/parser/string_type.h"
+#include "light_angel/parser/token.h"
+#include "light_angel/sir/sir.h"
 
 #include <unordered_map>
 #include <vector>
