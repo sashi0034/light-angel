@@ -38,6 +38,8 @@ add_subdirectory(src/fmt EXCLUDE_FROM_ALL)
 add_library(light_angel_core
         include/light_angel/node.h
         include/light_angel/parser.h
+        include/light_angel/sir.h
+        include/light_angel/sir_module.h
         include/light_angel/string_type.h
         include/light_angel/token.h
         src/lexer.cpp
@@ -46,6 +48,8 @@ add_library(light_angel_core
         src/parser.cpp
         src/parser_context.cpp
         src/parser_context.h
+        src/sir_builder.cpp
+        src/sir_builder.h
         src/token.cpp
 )
 
