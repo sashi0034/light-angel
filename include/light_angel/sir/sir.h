@@ -48,7 +48,6 @@ namespace light_angel
         Class,
         Interface,
         Enum,
-        Array, // FIXME: Remove this?
         Handle,
         Function,
         NativeType,
@@ -77,11 +76,6 @@ namespace light_angel
         {
         };
 
-        struct array_props
-        {
-            SirTypeId elementType = InvalidType;
-        };
-
         struct handle_props
         {
             SirTypeId elementType = InvalidType;
@@ -95,12 +89,11 @@ namespace light_angel
             SirTypeId returnType = InvalidType;
         };
 
-        using Data = std::variant<
+        using data_type = std::variant<
             primitive_props,
             class_props,
             interface_props,
             enum_props,
-            array_props,
             handle_props,
             function_props>;
 
@@ -111,7 +104,7 @@ namespace light_angel
 
         bool isConst = false;
 
-        Data data = primitive_props{};
+        data_type data = primitive_props{};
     };
 
     // -----------------------------------------------
