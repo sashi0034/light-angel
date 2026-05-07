@@ -27,10 +27,8 @@ namespace light_angel
     // Type info
     // -----------------------------------------------
 
-    enum class SirTypeKind : uint8_t
+    enum class PrimitiveTypeKind : uint8_t
     {
-        Error,
-        Void,
         Bool,
         Int,
         Int8,
@@ -44,7 +42,14 @@ namespace light_angel
         UInt64,
         Float,
         Double,
+    };
+
+    enum class SirTypeKind : uint8_t
+    {
+        Error,
+        Void, // TODO: Remove this?
         Null,
+        Primitive,
         Class,
         Interface,
         Enum,
@@ -58,31 +63,31 @@ namespace light_angel
     {
         // No payload. Used by primitive-like kinds (Error/Void/Bool/integer widths/
         // Float/Double/Null/NativeType/ScriptType).
-        struct primitive_props
+        struct primitive_data
         {
         };
 
-        struct class_props
+        struct class_data
         {
             // Non-empty for generic class instantiations.
             std::vector<SirTypeId> typeArgs;
         };
 
-        struct interface_props
+        struct interface_data
         {
         };
 
-        struct enum_props
+        struct enum_data
         {
         };
 
-        struct handle_props
+        struct handle_data
         {
             SirTypeId elementType = InvalidType;
             bool isConstHandle = false;
         };
 
-        struct function_props
+        struct function_data
         {
             // TODO: Use SirFunctionId instead?
             std::vector<SirTypeId> parameterTypes;
@@ -90,21 +95,34 @@ namespace light_angel
         };
 
         using data_type = std::variant<
-            primitive_props,
-            class_props,
-            interface_props,
-            enum_props,
-            handle_props,
-            function_props>;
+            primitive_data,
+            class_data,
+            interface_data,
+            enum_data,
+            handle_data,
+            function_data>;
 
         SirTypeKind kind = SirTypeKind::Error;
         std::string name;
 
         SirSymbolId symbol = InvalidSymbol;
 
-        bool isConst = false;
+        data_type data = primitive_data{};
+    };
 
-        data_type data = primitive_props{};
+    enum class HandleKind : uint8_t
+    {
+        None,
+        Handle,
+        ConstHandle,
+    };
+
+    struct SirResolvedType
+    {
+        SirTypeId type = InvalidType;
+
+        bool isConst = false;
+        HandleKind handle = HandleKind::None;
     };
 
     // -----------------------------------------------
@@ -145,7 +163,7 @@ namespace light_angel
         SourceSpan span{};
 
         SirSymbolId symbol = InvalidSymbol;
-        SirTypeId type = InvalidType;
+        SirResolvedType type;
 
         RefDirection refDir = RefDirection::None; // "in", "out", "inout"
     };
@@ -176,7 +194,7 @@ namespace light_angel
         SourceSpan span{};
 
         SirSymbolId symbol = InvalidSymbol;
-        SirTypeId type = InvalidType;
+        SirResolvedType type;
         SirExprId initializer = InvalidExpr;
     };
 
@@ -188,47 +206,11 @@ namespace light_angel
     {
     };
 
-    enum class SirLiteralKind : uint8_t
-    {
-        Int,
-        UInt,
-        Float,
-        Double,
-        Bool,
-        String,
-        Null,
-        Void,
-    };
-
-    struct SirLiteralExpr
-    {
-        // TODO: Use a variant?
-        SirLiteralKind kind = SirLiteralKind::Int;
-        int64_t intValue = 0;
-        uint64_t uintValue = 0;
-        double floatValue = 0.0;
-        bool boolValue = false;
-        std::string stringValue;
-    };
-
-    // Reference to a resolved symbol (local var, parameter, global, function name, ...).
-    struct SirSymbolRefExpr
-    {
-        SirSymbolId symbol = InvalidSymbol;
-    };
-
-    // Plain assignment '='. Compound assigns are normalized to (target = target op value).
-    struct SirAssignExpr
-    {
-        SirExprId target = InvalidExpr;
-        SirExprId value = InvalidExpr;
-    };
-
     enum class SirBinaryOp : uint8_t
     {
         // arithmetic
-        Add,
-        Sub,
+        Add, // '+'
+        Sub, //
         Mul,
         Div,
         Mod,
@@ -266,6 +248,11 @@ namespace light_angel
         SirFunctionId overloadedFunction = InvalidFunction;
     };
 
+    struct SirListExpr
+    {
+        // TODO
+    };
+
     enum class SirUnaryOp : uint8_t
     {
         Neg,
@@ -293,36 +280,61 @@ namespace light_angel
         std::vector<SirExprId> args;
     };
 
-    struct SirMethodCallExpr
+    struct SirVarAccessExpr
     {
-        SirExprId receiver = InvalidExpr;
-        SirFunctionId function = InvalidFunction;
-        std::vector<SirExprId> args;
+        // TODO
     };
 
-    struct SirMemberAccessExpr
+    struct SirCastExpr
     {
-        SirExprId object = InvalidExpr;
-        SirSymbolId field = InvalidSymbol;
+        // TODO
     };
 
-    // Implicit conversion. Target type is the SirExpr::type of the wrapping expression.
-    struct SirImplicitCastExpr
+    enum class SirLiteralKind : uint8_t
     {
-        SirExprId source = InvalidExpr;
+        Int,
+        UInt,
+        Float,
+        Double,
+        Bool,
+        String,
+        Null,
+        Void,
     };
 
+    struct SirLiteralExpr
+    {
+        // TODO: Use a variant?
+        SirLiteralKind kind = SirLiteralKind::Int;
+        int64_t intValue = 0;
+        uint64_t uintValue = 0;
+        double floatValue = 0.0;
+        bool boolValue = false;
+        std::string stringValue;
+    };
+
+    // Plain assignment '='. Compound assigns are normalized to (target = target op value).
+    struct SirAssignExpr
+    {
+        SirExprId target = InvalidExpr;
+        SirExprId value = InvalidExpr;
+    };
+
+    // EXPR ::= EXPRTERM {EXPROP EXPRTERM}
+    // EXPRTERM ::= ([TYPE '='] INITLIST) | ({EXPRPREOP} EXPRVALUE {EXPRPOSTOP})
+    // EXPRVALUE ::= CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
+    // ASSIGN ::= CONDITION [ ASSIGNOP ASSIGN ]
+    // CONDITION ::= EXPR ['?' ASSIGN ':' ASSIGN]
     using SirExprData = std::variant<
         SirErrorExpr,
-        SirLiteralExpr,
-        SirSymbolRefExpr,
-        SirAssignExpr,
         SirBinaryExpr,
-        SirUnaryExpr,
+        SirListExpr,
+        SirUnaryOp,
         SirCallExpr,
-        SirMethodCallExpr,
-        SirMemberAccessExpr,
-        SirImplicitCastExpr>;
+        SirVarAccessExpr,
+        SirCastExpr,
+        SirLiteralExpr,
+        SirAssignExpr>;
 
     struct SirExpr
     {
@@ -335,11 +347,12 @@ namespace light_angel
     // Statements
     // -----------------------------------------------
 
+    // TODO: Remove this?
     struct SirErrorStatement
     {
     };
 
-    struct SirBlockStatement // TODO: Rename to SirStatementBlock? Or Remove this and just use SirBlock directly as a statement?
+    struct SirBlockStatement // TODO: Rename to SirStatementBlock?
     {
         SirBlockId block = InvalidBlock;
     };
@@ -351,12 +364,10 @@ namespace light_angel
         SirExprId initializer = InvalidExpr; // may be InvalidExpr
     };
 
-    struct SirExprStatement
+    struct SirUsingStatement
     {
-        SirExprId expr = InvalidExpr;
+        // TODO
     };
-
-    // STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
 
     struct SirIfStatement
     {
@@ -406,15 +417,22 @@ namespace light_angel
     {
     };
 
+    struct SirExprStatement
+    {
+        SirExprId expr = InvalidExpr;
+    };
+
     struct SirTryStatement
     {
     };
 
+    // STATBLOCK ::= '{' {VAR | STATEMENT | USING} '}'
+    // STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
     using SirStatementData = std::variant<
-        SirErrorStatement,
+        SirErrorStatement, // TODO: Remove this?
         SirBlockStatement,
         SirVarDeclStatement,
-        SirExprStatement,
+        SirUsingStatement, // TODO
         SirIfStatement,
         SirForStatement,
         SirForEachStatement,
@@ -424,6 +442,7 @@ namespace light_angel
         SirContinueStatement,
         SirDoWhileStatement,
         SirSwitchStatement,
+        SirExprStatement,
         SirTryStatement>;
 
     struct SirStatement

@@ -342,7 +342,7 @@ namespace light_angel
         SirTypeInfo ftype;
         ftype.kind = SirTypeKind::Function;
         ftype.name = sf.name;
-        SirTypeInfo::function_props fprops;
+        SirTypeInfo::function_data fprops;
         fprops.returnType = sf.returnType;
         fprops.parameterTypes = paramTypes;
         ftype.data = std::move(fprops);
