@@ -61,10 +61,9 @@ namespace light_angel
 
     struct SirTypeInfo
     {
-        // No payload. Used by primitive-like kinds (Error/Void/Bool/integer widths/
-        // Float/Double/Null/NativeType/ScriptType).
         struct primitive_data
         {
+            PrimitiveTypeKind primitiveKind = PrimitiveTypeKind::Int;
         };
 
         struct class_data
@@ -280,14 +279,19 @@ namespace light_angel
         std::vector<SirExprId> args;
     };
 
-    struct SirVarAccessExpr
+    struct SirSymbolRefExpr
     {
-        // TODO
+        SirSymbolId symbol = InvalidSymbol;
     };
 
     struct SirCastExpr
     {
         // TODO
+    };
+
+    struct SirImplicitCastExpr
+    {
+        SirExprId source = InvalidExpr;
     };
 
     enum class SirLiteralKind : uint8_t
@@ -329,10 +333,11 @@ namespace light_angel
         SirErrorExpr,
         SirBinaryExpr,
         SirListExpr,
-        SirUnaryOp,
+        SirUnaryExpr,
         SirCallExpr,
-        SirVarAccessExpr,
+        SirSymbolRefExpr,
         SirCastExpr,
+        SirImplicitCastExpr,
         SirLiteralExpr,
         SirAssignExpr>;
 

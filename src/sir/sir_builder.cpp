@@ -33,30 +33,40 @@ namespace light_angel
 
     void SirBuilder::initBuiltinTypes()
     {
-        auto add = [&](SirTypeKind kind, const char* name)
+        auto addSimple = [&](SirTypeKind kind, const char* name)
         {
             SirTypeInfo t;
             t.kind = kind;
             t.name = name;
             return m_module.addType(std::move(t));
         };
-        m_module.errorType = add(SirTypeKind::Error, "<error>");
-        m_module.voidType = add(SirTypeKind::Void, "void");
-        m_module.boolType = add(SirTypeKind::Bool, "bool");
-        m_module.intType = add(SirTypeKind::Int, "int");
-        m_module.int8Type = add(SirTypeKind::Int8, "int8");
-        m_module.int16Type = add(SirTypeKind::Int16, "int16");
-        m_module.int32Type = add(SirTypeKind::Int32, "int32");
-        m_module.int64Type = add(SirTypeKind::Int64, "int64");
-        m_module.uintType = add(SirTypeKind::UInt, "uint");
-        m_module.uint8Type = add(SirTypeKind::UInt8, "uint8");
-        m_module.uint16Type = add(SirTypeKind::UInt16, "uint16");
-        m_module.uint32Type = add(SirTypeKind::UInt32, "uint32");
-        m_module.uint64Type = add(SirTypeKind::UInt64, "uint64");
-        m_module.floatType = add(SirTypeKind::Float, "float");
-        m_module.doubleType = add(SirTypeKind::Double, "double");
-        m_module.stringType = add(SirTypeKind::NativeType, "string");
-        m_module.nullType = add(SirTypeKind::Null, "null_t");
+        auto addPrim = [&](PrimitiveTypeKind pk, const char* name)
+        {
+            SirTypeInfo t;
+            t.kind = SirTypeKind::Primitive;
+            t.name = name;
+            SirTypeInfo::primitive_data pd;
+            pd.primitiveKind = pk;
+            t.data = pd;
+            return m_module.addType(std::move(t));
+        };
+        m_module.errorType = addSimple(SirTypeKind::Error, "<error>");
+        m_module.voidType = addSimple(SirTypeKind::Void, "void");
+        m_module.boolType = addPrim(PrimitiveTypeKind::Bool, "bool");
+        m_module.intType = addPrim(PrimitiveTypeKind::Int, "int");
+        m_module.int8Type = addPrim(PrimitiveTypeKind::Int8, "int8");
+        m_module.int16Type = addPrim(PrimitiveTypeKind::Int16, "int16");
+        m_module.int32Type = addPrim(PrimitiveTypeKind::Int32, "int32");
+        m_module.int64Type = addPrim(PrimitiveTypeKind::Int64, "int64");
+        m_module.uintType = addPrim(PrimitiveTypeKind::UInt, "uint");
+        m_module.uint8Type = addPrim(PrimitiveTypeKind::UInt8, "uint8");
+        m_module.uint16Type = addPrim(PrimitiveTypeKind::UInt16, "uint16");
+        m_module.uint32Type = addPrim(PrimitiveTypeKind::UInt32, "uint32");
+        m_module.uint64Type = addPrim(PrimitiveTypeKind::UInt64, "uint64");
+        m_module.floatType = addPrim(PrimitiveTypeKind::Float, "float");
+        m_module.doubleType = addPrim(PrimitiveTypeKind::Double, "double");
+        m_module.stringType = addSimple(SirTypeKind::NativeType, "string");
+        m_module.nullType = addSimple(SirTypeKind::Null, "null_t");
     }
 
     SirTypeId SirBuilder::builtinTypeFromKeyword(str_view kw) const
@@ -332,7 +342,7 @@ namespace light_angel
                 SirParameter sp;
                 sp.name = tokenText(p->identifier);
                 sp.span = p->span;
-                sp.type = p->type ? buildType(*p->type) : m_module.errorType;
+                sp.type.type = p->type ? buildType(*p->type) : m_module.errorType;
                 sp.refDir = RefDirection::In;
                 sf.parameters.push_back(std::move(sp));
             }
@@ -380,7 +390,7 @@ namespace light_angel
             psym.kind = SirSymbolKind::Parameter;
             psym.name = sp.name;
             psym.span = sp.span;
-            psym.type = sp.type;
+            psym.type = sp.type.type;
             sp.symbol = m_module.addSymbol(std::move(psym));
             declareInScope(sp.name, sp.symbol);
         }
@@ -878,7 +888,7 @@ namespace light_angel
                     const auto& params = m_module.functions[fnId].parameters;
                     if (idx < params.size())
                     {
-                        argExpr = makeImplicitCastIfNeeded(argExpr, params[idx].type, fc.span);
+                        argExpr = makeImplicitCastIfNeeded(argExpr, params[idx].type.type, fc.span);
                     }
                 }
 
