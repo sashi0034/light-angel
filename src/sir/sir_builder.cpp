@@ -285,7 +285,7 @@ namespace light_angel
             switch (child->kind)
             {
             case NodeKind::Func:
-                buildFunction(static_cast<const Node_Func&>(*child));
+                buildFunction(AsNode<Node_Func>(*child));
                 break;
             // TODO: NAMESPACE / USING / ENUM / TYPEDEF / CLASS / INTERFACE / FUNCDEF / VIRTUALPROP / VAR / IMPORT
             default:
