@@ -1,7 +1,8 @@
 #include "sir_builder.h"
 
+#include "sir_builder_context.h"
+
 #include <cctype>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -9,64 +10,37 @@ namespace
 {
     using namespace light_angel;
 
-    struct SirScope
+    SirBuildResult build(SirBuilderContext& builder, const Node_Script& script);
+
+    void buildScript(SirBuilderContext& builder, const Node_Script& script);
+    void buildFunction(SirBuilderContext& builder, const Node_Func& func);
+    SirStatementId buildVarDecl(SirBuilderContext& builder, const Node_Var& var);
+    SirBlockId buildStatBlock(SirBuilderContext& builder, const Node_StatBlock& sb);
+    SirTypeId buildType(SirBuilderContext& builder, const Node_Type& typeNode);
+    SirStatementId buildStatementNode(SirBuilderContext& builder, const NodeBase& node);
+    SirStatementId buildExprStat(SirBuilderContext& builder, const Node_ExprStat& es);
+    SirStatementId buildReturn(SirBuilderContext& builder, const Node_Return& ret);
+    SirExprId buildExpr(SirBuilderContext& builder, const Node_Expr& expr);
+    SirExprId buildExprTerm(SirBuilderContext& builder, const Node_ExprTerm& term);
+    SirExprId buildExprValue(SirBuilderContext& builder, const NodeBase& value);
+    SirExprId buildLiteral(SirBuilderContext& builder, const Node_Literal& lit);
+    SirExprId buildFuncCall(SirBuilderContext& builder, const Node_FuncCall& fc);
+    SirExprId buildVarAccess(SirBuilderContext& builder, const Node_VarAccess& va);
+    SirExprId buildAssign(SirBuilderContext& builder, const Node_Assign& assign);
+    SirExprId buildCondition(SirBuilderContext& builder, const Node_Condition& cond);
+
+    SirStatementId buildStatBlockAsStatement(SirBuilderContext& builder, const Node_StatBlock& sb);
+
+    SirBuilderContext makeBuilder(str_view source)
     {
-        // name -> symbol id
-        std::unordered_map<std::string, SirSymbolId> names;
-    };
-
-    struct SirBuilder
-    {
-        str_view source;
-        SirModule module;
-        std::vector<Diagnostic> diagnostics;
-        std::vector<SirScope> scopes;
-        SirFunctionId currentFunction = InvalidFunction;
-    };
-
-    SirBuildResult build(SirBuilder& builder, const Node_Script& script);
-
-    void buildScript(SirBuilder& builder, const Node_Script& script);
-    void buildFunction(SirBuilder& builder, const Node_Func& func);
-    SirStatementId buildVarDecl(SirBuilder& builder, const Node_Var& var);
-    SirBlockId buildStatBlock(SirBuilder& builder, const Node_StatBlock& sb);
-    SirTypeId buildType(SirBuilder& builder, const Node_Type& typeNode);
-    SirStatementId buildStatementNode(SirBuilder& builder, const NodeBase& node);
-    SirStatementId buildExprStat(SirBuilder& builder, const Node_ExprStat& es);
-    SirStatementId buildReturn(SirBuilder& builder, const Node_Return& ret);
-    SirExprId buildExpr(SirBuilder& builder, const Node_Expr& expr);
-    SirExprId buildExprTerm(SirBuilder& builder, const Node_ExprTerm& term);
-    SirExprId buildExprValue(SirBuilder& builder, const NodeBase& value);
-    SirExprId buildLiteral(SirBuilder& builder, const Node_Literal& lit);
-    SirExprId buildFuncCall(SirBuilder& builder, const Node_FuncCall& fc);
-    SirExprId buildVarAccess(SirBuilder& builder, const Node_VarAccess& va);
-    SirExprId buildAssign(SirBuilder& builder, const Node_Assign& assign);
-    SirExprId buildCondition(SirBuilder& builder, const Node_Condition& cond);
-
-    SirStatementId buildStatBlockAsStatement(SirBuilder& builder, const Node_StatBlock& sb);
-    SirSymbolId lookupName(SirBuilder& builder, const std::string& name);
-    std::string spanText(SirBuilder& builder, SourceSpan span);
-    std::string tokenText(SirBuilder& builder, const TokenView& tok);
-    SirExprId makeErrorExpr(SirBuilder& builder, SourceSpan span);
-    SirStatementId makeErrorStatement(SirBuilder& builder, SourceSpan span);
-    SirExprId makeImplicitCastIfNeeded(SirBuilder& builder, SirExprId src, SirTypeId target, SourceSpan span);
-    void diag(SirBuilder& builder, SourceSpan span, std::string msg);
-    void pushScope(SirBuilder& builder);
-    void popScope(SirBuilder& builder);
-    void declareInScope(SirBuilder& builder, const std::string& name, SirSymbolId id);
-    void initBuiltinTypes(SirBuilder& builder);
-    SirTypeId getBuiltinType(const SirBuilder& builder, str_view keyword);
-
-    SirBuilder makeBuilder(str_view source)
-    {
-        SirBuilder builder;
+        SirBuilderContext builder;
         builder.source = source;
-        initBuiltinTypes(builder);
-        pushScope(builder); // global scope
+        builder.initBuiltinTypes();
+        builder.pushScope(); // global scope
         return builder;
     }
 
-    SirBuildResult build(SirBuilder& builder, const Node_Script& script)
+    SirBuildResult build(SirBuilderContext& builder, const Node_Script& script)
     {
         buildScript(builder, script);
         SirBuildResult result;
@@ -76,167 +50,10 @@ namespace
     }
 
     // -----------------------------------------------
-    // builder helpers
-    // -----------------------------------------------
-
-    void initBuiltinTypes(SirBuilder& builder)
-    {
-        auto addSimple = [&](SirTypeKind kind, const char* name)
-        {
-            SirTypeInfo t;
-            t.kind = kind;
-            t.name = name;
-            return builder.module.addType(std::move(t));
-        };
-        auto addPrimitive = [&](PrimitiveTypeKind pk, const char* name)
-        {
-            SirTypeInfo t;
-            t.kind = SirTypeKind::Primitive;
-            t.name = name;
-            SirTypeInfo::primitive_data pd;
-            pd.primitiveKind = pk;
-            t.data = pd;
-            return builder.module.addType(std::move(t));
-        };
-        builder.module.errorType = addSimple(SirTypeKind::Error, "<error>");
-        builder.module.voidType = addSimple(SirTypeKind::Void, "void");
-        builder.module.boolType = addPrimitive(PrimitiveTypeKind::Bool, "bool");
-        builder.module.intType = addPrimitive(PrimitiveTypeKind::Int, "int");
-        builder.module.int8Type = addPrimitive(PrimitiveTypeKind::Int8, "int8");
-        builder.module.int16Type = addPrimitive(PrimitiveTypeKind::Int16, "int16");
-        builder.module.int32Type = addPrimitive(PrimitiveTypeKind::Int32, "int32");
-        builder.module.int64Type = addPrimitive(PrimitiveTypeKind::Int64, "int64");
-        builder.module.uintType = addPrimitive(PrimitiveTypeKind::UInt, "uint");
-        builder.module.uint8Type = addPrimitive(PrimitiveTypeKind::UInt8, "uint8");
-        builder.module.uint16Type = addPrimitive(PrimitiveTypeKind::UInt16, "uint16");
-        builder.module.uint32Type = addPrimitive(PrimitiveTypeKind::UInt32, "uint32");
-        builder.module.uint64Type = addPrimitive(PrimitiveTypeKind::UInt64, "uint64");
-        builder.module.floatType = addPrimitive(PrimitiveTypeKind::Float, "float");
-        builder.module.doubleType = addPrimitive(PrimitiveTypeKind::Double, "double");
-        builder.module.stringType = addSimple(SirTypeKind::NativeType, "string");
-        builder.module.nullType = addSimple(SirTypeKind::Null, "null_t");
-    }
-
-    SirTypeId getBuiltinType(const SirBuilder& builder, str_view keyword)
-    {
-        if (keyword == "void") return builder.module.voidType;
-
-        if (keyword == "bool") return builder.module.boolType;
-
-        if (keyword == "int") return builder.module.intType;
-        if (keyword == "int8") return builder.module.int8Type;
-        if (keyword == "int16") return builder.module.int16Type;
-        if (keyword == "int32") return builder.module.int32Type;
-        if (keyword == "int64") return builder.module.int64Type;
-
-        if (keyword == "uint") return builder.module.uintType;
-        if (keyword == "uint8") return builder.module.uint8Type;
-        if (keyword == "uint16") return builder.module.uint16Type;
-        if (keyword == "uint32") return builder.module.uint32Type;
-        if (keyword == "uint64") return builder.module.uint64Type;
-
-        if (keyword == "float") return builder.module.floatType;
-
-        if (keyword == "double") return builder.module.doubleType;
-
-        if (keyword == "string") return builder.module.stringType;
-
-        return InvalidType;
-    }
-
-    void pushScope(SirBuilder& builder)
-    {
-        builder.scopes.emplace_back();
-    }
-
-    void popScope(SirBuilder& builder)
-    {
-        builder.scopes.pop_back();
-    }
-
-    void declareInScope(SirBuilder& builder, const std::string& name, SirSymbolId id)
-    {
-        if (builder.scopes.empty()) return;
-
-        builder.scopes.back().names[name] = id;
-    }
-
-    SirSymbolId lookupName(SirBuilder& builder, const std::string& name)
-    {
-        for (auto it = builder.scopes.rbegin(); it != builder.scopes.rend(); ++it)
-        {
-            auto found = it->names.find(name);
-            if (found != it->names.end()) return found->second;
-        }
-
-        return InvalidSymbol;
-    }
-
-    std::string spanText(SirBuilder& builder, SourceSpan span)
-    {
-        if (span.offset >= builder.source.size()) return {};
-
-        size_t end = static_cast<size_t>(span.offset) + static_cast<size_t>(span.length);
-        if (end > builder.source.size()) end = builder.source.size();
-
-        return std::string(builder.source.substr(span.offset, end - span.offset));
-    }
-
-    std::string tokenText(SirBuilder& builder, const TokenView& tok)
-    {
-        return spanText(builder, tok.span());
-    }
-
-    void diag(SirBuilder& builder, SourceSpan span, std::string msg)
-    {
-        Diagnostic d;
-        d.severity = Diagnostic::Severity::Error;
-        d.span = span;
-        d.message = std::move(msg);
-        builder.diagnostics.push_back(std::move(d));
-    }
-
-    SirExprId makeErrorExpr(SirBuilder& builder, SourceSpan span)
-    {
-        SirExpr e;
-        e.span = span;
-        e.type = builder.module.errorType;
-        e.data = SirErrorExpr{};
-        return builder.module.addExpr(std::move(e));
-    }
-
-    SirStatementId makeErrorStatement(SirBuilder& builder, SourceSpan span)
-    {
-        SirStatement s;
-        s.span = span;
-        s.data = SirErrorStatement{};
-        return builder.module.addStatement(std::move(s));
-    }
-
-    SirExprId makeImplicitCastIfNeeded(SirBuilder& builder, SirExprId src, SirTypeId target, SourceSpan span)
-    {
-        // TODO: full implicit conversion rules. For now only wrap when types differ
-        // and neither is the error type. The cast leaves overload semantics to a
-        // later pass.
-        if (src == InvalidExpr || target == InvalidType) return src;
-
-        SirTypeId srcType = builder.module.exprs[src].type;
-        if (srcType == target) return src;
-
-        if (srcType == builder.module.errorType || target == builder.module.errorType) return src;
-
-        SirExpr cast;
-        cast.span = span;
-        cast.type = target;
-        cast.data = SirImplicitCastExpr{src};
-        return builder.module.addExpr(std::move(cast));
-    }
-
-    // -----------------------------------------------
     // Non-BNF helpers
     // -----------------------------------------------
 
-    SirStatementId buildStatBlockAsStatement(SirBuilder& builder, const Node_StatBlock& sb)
+    SirStatementId buildStatBlockAsStatement(SirBuilderContext& builder, const Node_StatBlock& sb)
     {
         SirBlockId blk = buildStatBlock(builder, sb);
         SirStatement s;
@@ -324,7 +141,7 @@ namespace
     // -----------------------------------------------
 
     // **BNF** SCRIPT ::= {IMPORT | ENUM | TYPEDEF | CLASS | INTERFACE | FUNCDEF | VIRTUALPROP | VAR | FUNC | NAMESPACE | USING | ';'}
-    void buildScript(SirBuilder& builder, const Node_Script& script)
+    void buildScript(SirBuilderContext& builder, const Node_Script& script)
     {
         for (const auto& child : script.children)
         {
@@ -337,7 +154,7 @@ namespace
                 break;
             // TODO: NAMESPACE / USING / ENUM / TYPEDEF / CLASS / INTERFACE / FUNCDEF / VIRTUALPROP / VAR / IMPORT
             default:
-                diag(builder, child->span, "top-level node kind not yet supported in SIR builder");
+                builder.reportDiagnostic(child->span, "top-level node kind not yet supported in SIR builder");
                 break;
             }
         }
@@ -359,11 +176,11 @@ namespace
     // TODO
 
     // **BNF** FUNC ::= {'shared' | 'external'} ['private' | 'protected'] [((TYPE ['&']) | '~')] IDENTIFIER ['<' TYPE {',' TYPE} '>'] PARAMLIST [LISTPATTERN] ['const'] FUNCATTR (';' | STATBLOCK)
-    void buildFunction(SirBuilder& builder, const Node_Func& func)
+    void buildFunction(SirBuilderContext& builder, const Node_Func& func)
     {
         SirFunction sf;
         sf.span = func.span;
-        sf.name = tokenText(builder, func.identifier);
+        sf.name = builder.getTokenText(func.identifier);
         sf.isDestructor = func.isDestructor;
         sf.isExternal = func.attr.has(EntityAttribute::External);
 
@@ -388,7 +205,7 @@ namespace
                 if (!p) continue;
 
                 SirParameter sp;
-                sp.name = tokenText(builder, p->identifier);
+                sp.name = builder.getTokenText(p->identifier);
                 sp.span = p->span;
                 sp.type.type = p->type ? buildType(builder, *p->type) : builder.module.errorType;
                 sp.refDir = RefDirection::In;
@@ -417,7 +234,7 @@ namespace
         sf.symbol = symId;
         SirFunctionId fnId = builder.module.addFunction(std::move(sf));
         builder.module.symbols[symId].function = fnId;
-        declareInScope(builder, builder.module.functions[fnId].name, symId);
+        builder.declareInScope(builder.module.functions[fnId].name, symId);
 
         if (!func.body)
         {
@@ -428,7 +245,7 @@ namespace
         // Build body in its own scope with parameters declared.
         SirFunctionId prev = builder.currentFunction;
         builder.currentFunction = fnId;
-        pushScope(builder);
+        builder.pushScope();
 
         for (auto& sp : builder.module.functions[fnId].parameters)
         {
@@ -440,13 +257,13 @@ namespace
             psym.span = sp.span;
             psym.type = sp.type.type;
             sp.symbol = builder.module.addSymbol(std::move(psym));
-            declareInScope(builder, sp.name, sp.symbol);
+            builder.declareInScope(sp.name, sp.symbol);
         }
 
         SirBlockId body = buildStatBlock(builder, *func.body);
         builder.module.functions[fnId].body = body;
 
-        popScope(builder);
+        builder.popScope();
         builder.currentFunction = prev;
     }
 
@@ -463,12 +280,12 @@ namespace
     // TODO
 
     // **BNF** VAR ::= ['private' | 'protected'] TYPE IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST] {',' IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST]} ';'
-    SirStatementId buildVarDecl(SirBuilder& builder, const Node_Var& var)
+    SirStatementId buildVarDecl(SirBuilderContext& builder, const Node_Var& var)
     {
         if (!var.type)
         {
-            diag(builder, var.span, "internal: var without type");
-            return makeErrorStatement(builder, var.span);
+            builder.reportDiagnostic(var.span, "internal: var without type");
+            return builder.makeErrorStatement(var.span);
         }
 
         SirTypeId varType = buildType(builder, *var.type);
@@ -481,18 +298,18 @@ namespace
         // block when there is more than one.
         if (var.decls.empty())
         {
-            return makeErrorStatement(builder, var.span);
+            return builder.makeErrorStatement(var.span);
         }
 
         auto buildOne = [&](const Node_Var::Declaration& decl) -> SirStatementId
         {
             SirSymbol sym;
             sym.kind = SirSymbolKind::LocalVar;
-            sym.name = tokenText(builder, decl.identifier);
+            sym.name = builder.getTokenText(decl.identifier);
             sym.span = var.span;
             sym.type = varType;
             SirSymbolId sid = builder.module.addSymbol(std::move(sym));
-            declareInScope(builder, builder.module.symbols[sid].name, sid);
+            builder.declareInScope(builder.module.symbols[sid].name, sid);
 
             SirExprId init = InvalidExpr;
             if (decl.init)
@@ -500,13 +317,13 @@ namespace
                 if (decl.init->kind == NodeKind::Assign)
                 {
                     init = buildAssign(builder, static_cast<const Node_Assign&>(*decl.init));
-                    init = makeImplicitCastIfNeeded(builder, init, varType, var.span);
+                    init = builder.makeImplicitCastIfNeeded(init, varType, var.span);
                 }
                 else
                 {
                     // TODO: InitList / ArgList initializers.
-                    diag(builder, decl.init->span, "var initializer kind not yet supported");
-                    init = makeErrorExpr(builder, decl.init->span);
+                    builder.reportDiagnostic(decl.init->span, "var initializer kind not yet supported");
+                    init = builder.makeErrorExpr(decl.init->span);
                 }
             }
 
@@ -553,12 +370,12 @@ namespace
     // TODO
 
     // **BNF** STATBLOCK ::= '{' {VAR | STATEMENT | USING} '}'
-    SirBlockId buildStatBlock(SirBuilder& builder, const Node_StatBlock& sb)
+    SirBlockId buildStatBlock(SirBuilderContext& builder, const Node_StatBlock& sb)
     {
         SirBlock block;
         block.span = sb.span;
 
-        pushScope(builder);
+        builder.pushScope();
         for (const auto& child : sb.statements)
         {
             if (!child) continue;
@@ -570,7 +387,7 @@ namespace
             }
         }
 
-        popScope(builder);
+        builder.popScope();
 
         return builder.module.addBlock(std::move(block));
     }
@@ -585,28 +402,28 @@ namespace
     // TODO
 
     // **BNF** TYPE ::= ['const'] SCOPE DATATYPE ['<' TYPE {',' TYPE} '>'] { ('[' ']') | ('@' ['const']) }
-    SirTypeId buildType(SirBuilder& builder, const Node_Type& typeNode)
+    SirTypeId buildType(SirBuilderContext& builder, const Node_Type& typeNode)
     {
         if (!typeNode.dataType)
         {
-            diag(builder, typeNode.span, "internal: type node missing datatype");
+            builder.reportDiagnostic(typeNode.span, "internal: type node missing datatype");
             return builder.module.errorType;
         }
 
         // BNF: DATATYPE ::= (IDENTIFIER | PRIMITIVETYPE | '?' | 'auto')
-        std::string text = tokenText(builder, typeNode.dataType->token);
-        SirTypeId base = getBuiltinType(builder, text);
+        std::string text = builder.getTokenText(typeNode.dataType->token);
+        SirTypeId base = builder.getBuiltinType(text);
         if (base == InvalidType)
         {
             // TODO: user-defined types / scope resolution / template instances.
-            diag(builder, typeNode.span, "unresolved type '" + text + "'");
+            builder.reportDiagnostic(typeNode.span, "unresolved type '" + text + "'");
             return builder.module.errorType;
         }
 
         // TODO: array '[ ]' and handle '@' postfixes - currently unsupported, return base.
         if (!typeNode.postfixes.empty())
         {
-            diag(builder, typeNode.span, "type postfixes not yet supported in SIR");
+            builder.reportDiagnostic(typeNode.span, "type postfixes not yet supported in SIR");
             // Continue with base type; emit as Error to avoid silently dropping.
             return builder.module.errorType;
         }
@@ -627,7 +444,7 @@ namespace
     // TODO
 
     // **BNF** STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
-    SirStatementId buildStatementNode(SirBuilder& builder, const NodeBase& node)
+    SirStatementId buildStatementNode(SirBuilderContext& builder, const NodeBase& node)
     {
         switch (node.kind)
         {
@@ -637,7 +454,7 @@ namespace
             {
                 // STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
                 const auto& st = static_cast<const Node_Statement&>(node);
-                if (!st.child) return makeErrorStatement(builder, st.span);
+                if (!st.child) return builder.makeErrorStatement(st.span);
 
                 return buildStatementNode(builder, *st.child);
             }
@@ -649,8 +466,8 @@ namespace
             return buildExprStat(builder, static_cast<const Node_ExprStat&>(node));
         // TODO: If / While / DoWhile / For / ForEach / Switch / Break / Continue / Try / Using
         default:
-            diag(builder, node.span, "statement kind not yet supported in SIR builder");
-            return makeErrorStatement(builder, node.span);
+            builder.reportDiagnostic(node.span, "statement kind not yet supported in SIR builder");
+            return builder.makeErrorStatement(node.span);
         }
     }
 
@@ -679,7 +496,7 @@ namespace
     // TODO
 
     // **BNF** EXPRSTAT ::= [ASSIGN] ';'
-    SirStatementId buildExprStat(SirBuilder& builder, const Node_ExprStat& es)
+    SirStatementId buildExprStat(SirBuilderContext& builder, const Node_ExprStat& es)
     {
         SirExprStatement xs;
         if (es.assign)
@@ -697,7 +514,7 @@ namespace
     // TODO
 
     // **BNF** RETURN ::= 'return' [ASSIGN] ';'
-    SirStatementId buildReturn(SirBuilder& builder, const Node_Return& ret)
+    SirStatementId buildReturn(SirBuilderContext& builder, const Node_Return& ret)
     {
         SirReturnStatement rs;
         if (ret.value)
@@ -707,7 +524,7 @@ namespace
                 builder.currentFunction != InvalidFunction ? builder.module.functions[builder.currentFunction].returnType : InvalidType;
             if (expected != InvalidType)
             {
-                v = makeImplicitCastIfNeeded(builder, v, expected, ret.span);
+                v = builder.makeImplicitCastIfNeeded(v, expected, ret.span);
             }
 
             rs.value = v;
@@ -723,9 +540,9 @@ namespace
     // TODO
 
     // **BNF** EXPR ::= EXPRTERM {EXPROP EXPRTERM}
-    SirExprId buildExpr(SirBuilder& builder, const Node_Expr& expr)
+    SirExprId buildExpr(SirBuilderContext& builder, const Node_Expr& expr)
     {
-        if (!expr.first) return makeErrorExpr(builder, expr.span);
+        if (!expr.first) return builder.makeErrorExpr(expr.span);
 
         SirExprId acc = buildExprTerm(builder, *expr.first);
 
@@ -737,13 +554,13 @@ namespace
 
             SirExprId rhs = buildExprTerm(builder, *opTerm.term);
 
-            std::string opText = tokenText(builder, opTerm.op);
+            std::string opText = builder.getTokenText(opTerm.op);
             bool ok = false;
             SirBinaryOp bop = mapBinaryOp(opText, ok);
             if (!ok)
             {
-                diag(builder, opTerm.term->span, "unsupported binary operator '" + opText + "'");
-                acc = makeErrorExpr(builder, opTerm.term->span);
+                builder.reportDiagnostic(opTerm.term->span, "unsupported binary operator '" + opText + "'");
+                acc = builder.makeErrorExpr(opTerm.term->span);
                 continue;
             }
 
@@ -761,30 +578,30 @@ namespace
     }
 
     // **BNF** EXPRTERM ::= ([TYPE '='] INITLIST) | ({EXPRPREOP} EXPRVALUE {EXPRPOSTOP})
-    SirExprId buildExprTerm(SirBuilder& builder, const Node_ExprTerm& term)
+    SirExprId buildExprTerm(SirBuilderContext& builder, const Node_ExprTerm& term)
     {
         if (term.form == Node_ExprTerm::Form::InitListForm)
         {
             // TODO: init-list expressions.
-            diag(builder, term.span, "init-list expressions not yet supported in SIR");
-            return makeErrorExpr(builder, term.span);
+            builder.reportDiagnostic(term.span, "init-list expressions not yet supported in SIR");
+            return builder.makeErrorExpr(term.span);
         }
 
-        if (!term.exprValue) return makeErrorExpr(builder, term.span);
+        if (!term.exprValue) return builder.makeErrorExpr(term.span);
 
         SirExprId base = buildExprValue(builder, *term.exprValue);
 
         // TODO: prefix / postfix operators (postOps include '.member', '[...]', '(...)', '++', '--').
         if (!term.preOps.empty() || !term.postOps.empty())
         {
-            diag(builder, term.span, "prefix/postfix operators not yet supported in SIR");
+            builder.reportDiagnostic(term.span, "prefix/postfix operators not yet supported in SIR");
         }
 
         return base;
     }
 
     // **BNF** EXPRVALUE ::= CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
-    SirExprId buildExprValue(SirBuilder& builder, const NodeBase& value)
+    SirExprId buildExprValue(SirBuilderContext& builder, const NodeBase& value)
     {
         switch (value.kind)
         {
@@ -800,14 +617,14 @@ namespace
         case NodeKind::ExprValue:
             {
                 const auto& ev = static_cast<const Node_ExprValue&>(value);
-                if (!ev.value) return makeErrorExpr(builder, ev.span);
+                if (!ev.value) return builder.makeErrorExpr(ev.span);
 
                 return buildExprValue(builder, *ev.value);
             }
         // TODO: ConstructorCall / Cast / Lambda
         default:
-            diag(builder, value.span, "expression value kind not yet supported in SIR");
-            return makeErrorExpr(builder, value.span);
+            builder.reportDiagnostic(value.span, "expression value kind not yet supported in SIR");
+            return builder.makeErrorExpr(value.span);
         }
     }
 
@@ -830,9 +647,9 @@ namespace
     // TODO
 
     // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null' | 'void'
-    SirExprId buildLiteral(SirBuilder& builder, const Node_Literal& lit)
+    SirExprId buildLiteral(SirBuilderContext& builder, const Node_Literal& lit)
     {
-        std::string text = tokenText(builder, lit.token);
+        std::string text = builder.getTokenText(lit.token);
 
         SirLiteralExpr le;
         SirTypeId type = builder.module.errorType;
@@ -883,8 +700,8 @@ namespace
         }
         else
         {
-            diag(builder, lit.span, "unrecognized literal '" + text + "'");
-            return makeErrorExpr(builder, lit.span);
+            builder.reportDiagnostic(lit.span, "unrecognized literal '" + text + "'");
+            return builder.makeErrorExpr(lit.span);
         }
 
         SirExpr e;
@@ -895,11 +712,11 @@ namespace
     }
 
     // **BNF** FUNCCALL ::= SCOPE IDENTIFIER ['<' TYPE {',' TYPE} '>'] ARGLIST
-    SirExprId buildFuncCall(SirBuilder& builder, const Node_FuncCall& fc)
+    SirExprId buildFuncCall(SirBuilderContext& builder, const Node_FuncCall& fc)
     {
-        std::string name = tokenText(builder, fc.identifier);
+        std::string name = builder.getTokenText(fc.identifier);
         // TODO: scope-qualified lookup, template args, overload resolution.
-        SirSymbolId sid = lookupName(builder, name);
+        SirSymbolId sid = builder.lookupName(name);
         SirFunctionId fnId = InvalidFunction;
         SirTypeId resultType = builder.module.errorType;
         if (sid != InvalidSymbol && builder.module.symbols[sid].kind == SirSymbolKind::Function)
@@ -912,7 +729,7 @@ namespace
         }
         else
         {
-            diag(builder, fc.span, "unresolved function '" + name + "'");
+            builder.reportDiagnostic(fc.span, "unresolved function '" + name + "'");
         }
 
         std::vector<SirExprId> args;
@@ -923,7 +740,7 @@ namespace
             {
                 if (!a.value)
                 {
-                    args.push_back(makeErrorExpr(builder, fc.span));
+                    args.push_back(builder.makeErrorExpr(fc.span));
                     continue;
                 }
 
@@ -936,7 +753,7 @@ namespace
                     const auto& params = builder.module.functions[fnId].parameters;
                     if (idx < params.size())
                     {
-                        argExpr = makeImplicitCastIfNeeded(builder, argExpr, params[idx].type.type, fc.span);
+                        argExpr = builder.makeImplicitCastIfNeeded(argExpr, params[idx].type.type, fc.span);
                     }
                 }
 
@@ -952,15 +769,15 @@ namespace
     }
 
     // **BNF** VARACCESS ::= SCOPE IDENTIFIER
-    SirExprId buildVarAccess(SirBuilder& builder, const Node_VarAccess& va)
+    SirExprId buildVarAccess(SirBuilderContext& builder, const Node_VarAccess& va)
     {
-        std::string name = tokenText(builder, va.identifier);
+        std::string name = builder.getTokenText(va.identifier);
         // TODO: scope-qualified names.
-        SirSymbolId sid = lookupName(builder, name);
+        SirSymbolId sid = builder.lookupName(name);
         if (sid == InvalidSymbol)
         {
-            diag(builder, va.span, "unresolved name '" + name + "'");
-            return makeErrorExpr(builder, va.span);
+            builder.reportDiagnostic(va.span, "unresolved name '" + name + "'");
+            return builder.makeErrorExpr(va.span);
         }
 
         SirExpr e;
@@ -974,11 +791,11 @@ namespace
     // TODO
 
     // **BNF** ASSIGN ::= CONDITION [ ASSIGNOP ASSIGN ]
-    SirExprId buildAssign(SirBuilder& builder, const Node_Assign& assign)
+    SirExprId buildAssign(SirBuilderContext& builder, const Node_Assign& assign)
     {
         if (!assign.condition)
         {
-            return makeErrorExpr(builder, assign.span);
+            return builder.makeErrorExpr(assign.span);
         }
 
         SirExprId lhs = buildCondition(builder, *assign.condition);
@@ -988,13 +805,13 @@ namespace
         }
 
         SirExprId rhs = buildAssign(builder, *assign.rhs);
-        std::string op = tokenText(builder, assign.op);
+        std::string op = builder.getTokenText(assign.op);
 
         // BNF: ASSIGNOP ::= '=' | '+=' | '-=' | '*=' | '/=' | '|=' | '&=' | '^=' | '%=' | '**=' | '<<=' | '>>=' | '>>>='
         if (op == "=")
         {
             SirTypeId targetType = builder.module.exprs[lhs].type;
-            rhs = makeImplicitCastIfNeeded(builder, rhs, targetType, assign.span);
+            rhs = builder.makeImplicitCastIfNeeded(rhs, targetType, assign.span);
             SirExpr e;
             e.span = assign.span;
             e.type = targetType;
@@ -1034,8 +851,8 @@ namespace
 
         if (!ok)
         {
-            diag(builder, assign.span, "unsupported assignment operator '" + op + "'");
-            return makeErrorExpr(builder, assign.span);
+            builder.reportDiagnostic(assign.span, "unsupported assignment operator '" + op + "'");
+            return builder.makeErrorExpr(assign.span);
         }
 
         SirTypeId targetType = builder.module.exprs[lhs].type;
@@ -1054,16 +871,16 @@ namespace
     }
 
     // **BNF** CONDITION ::= EXPR ['?' ASSIGN ':' ASSIGN]
-    SirExprId buildCondition(SirBuilder& builder, const Node_Condition& cond)
+    SirExprId buildCondition(SirBuilderContext& builder, const Node_Condition& cond)
     {
-        if (!cond.expr) return makeErrorExpr(builder, cond.span);
+        if (!cond.expr) return builder.makeErrorExpr(cond.span);
 
         SirExprId base = buildExpr(builder, *cond.expr);
         if (!cond.thenExpr) return base;
 
         // TODO: ternary expression representation in SIR.
-        diag(builder, cond.span, "ternary '?:' not yet supported in SIR");
-        return makeErrorExpr(builder, cond.span);
+        builder.reportDiagnostic(cond.span, "ternary '?:' not yet supported in SIR");
+        return builder.makeErrorExpr(cond.span);
     }
 
     // **BNF** EXPROP ::= MATHOP | COMPOP | LOGICOP | BITOP
@@ -1090,7 +907,7 @@ namespace light_angel
 {
     SirBuildResult BuildSirModule(const Node_Script& script, str_view source)
     {
-        SirBuilder builder = makeBuilder(source);
+        SirBuilderContext builder = makeBuilder(source);
         return build(builder, script);
     }
 } // namespace light_angel

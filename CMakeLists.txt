@@ -51,6 +51,8 @@ add_library(light_angel_core
         src/parser/token.cpp
         src/sir/sir_builder.cpp
         src/sir/sir_builder.h
+        src/sir/sir_builder_context.cpp
+        src/sir/sir_builder_context.h
 )
 
 target_include_directories(light_angel_core
