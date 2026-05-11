@@ -800,13 +800,13 @@ namespace
             if (ctx.check("{"))
             {
                 ctx.advance();
-                node->entryKind = Node_ListEntry::Kind::RepeatEntry;
+                node->entryKind = Node_ListEntry::EntryKind::RepeatEntry;
                 node->entry = parseListEntry(ctx);
                 expectToken(ctx, "}");
             }
             else
             {
-                node->entryKind = Node_ListEntry::Kind::RepeatType;
+                node->entryKind = Node_ListEntry::EntryKind::RepeatType;
                 if (auto t = parseType(ctx)) node->types.push_back(std::move(t));
             }
 
@@ -815,7 +815,7 @@ namespace
         }
 
         auto node = std::make_unique<Node_ListEntry>(ctx.spanFrom(start));
-        node->entryKind = Node_ListEntry::Kind::TypeList;
+        node->entryKind = Node_ListEntry::EntryKind::TypeList;
 
         while (!ctx.isEnd())
         {
@@ -2032,7 +2032,7 @@ namespace
         if (ctx.check("."))
         {
             ctx.advance();
-            node->opKind = Node_ExprPostOp::Kind::Member;
+            node->opKind = Node_ExprPostOp::OpKind::Member;
             if (auto fc = parseFuncCall(ctx))
                 node->memberAccess = std::move(fc);
             else if (ctx.checkKind(TokenKind::Name))
@@ -2043,7 +2043,7 @@ namespace
         else if (ctx.check("["))
         {
             ctx.advance();
-            node->opKind = Node_ExprPostOp::Kind::Subscript;
+            node->opKind = Node_ExprPostOp::OpKind::Subscript;
             bool first = true;
             while (!ctx.isEnd() && !ctx.check("]"))
             {
@@ -2071,17 +2071,17 @@ namespace
         }
         else if (auto al = parseArgList(ctx))
         {
-            node->opKind = Node_ExprPostOp::Kind::Call;
+            node->opKind = Node_ExprPostOp::OpKind::Call;
             node->callArgs = std::move(al);
         }
         else if (ctx.check("++"))
         {
-            node->opKind = Node_ExprPostOp::Kind::Increment;
+            node->opKind = Node_ExprPostOp::OpKind::Increment;
             ctx.advance();
         }
         else if (ctx.check("--"))
         {
-            node->opKind = Node_ExprPostOp::Kind::Decrement;
+            node->opKind = Node_ExprPostOp::OpKind::Decrement;
             ctx.advance();
         }
         else

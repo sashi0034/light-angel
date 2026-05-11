@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -183,11 +184,22 @@ namespace light_angel
         SourceSpan span;
     };
 
+    using Node = NodeBase;
+
+    template <class T>
+    const T& AsNode(const Node& node)
+    {
+        assert(node.kind == T::Kind);
+        return static_cast<const T&>(node);
+    }
+
     // **BNF** SCRIPT ::= {IMPORT | ENUM | TYPEDEF | CLASS | INTERFACE | FUNCDEF | VIRTUALPROP | VAR | FUNC | NAMESPACE | USING | ';'}
     struct Node_Script final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Script;
+
         explicit Node_Script(SourceSpan span = {})
-            : NodeBase(NodeKind::Script, span)
+            : NodeBase(Kind, span)
         {
         }
 
@@ -197,8 +209,10 @@ namespace light_angel
     // **BNF** NAMESPACE ::= 'namespace' IDENTIFIER {'::' IDENTIFIER} '{' SCRIPT '}'
     struct Node_Namespace final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Namespace;
+
         explicit Node_Namespace(SourceSpan span = {})
-            : NodeBase(NodeKind::Namespace, span)
+            : NodeBase(Kind, span)
         {
         }
 
@@ -209,7 +223,9 @@ namespace light_angel
     // **BNF** USING ::= 'using' 'namespace' IDENTIFIER {'::' IDENTIFIER} ';'
     struct Node_Using final : NodeBase
     {
-        explicit Node_Using(SourceSpan span = {}) : NodeBase(NodeKind::Using, span) {}
+        static constexpr NodeKind Kind = NodeKind::Using;
+
+        explicit Node_Using(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<TokenView> identifiers;
     };
@@ -217,13 +233,15 @@ namespace light_angel
     // **BNF** ENUM ::= {'shared' | 'external'} 'enum' IDENTIFIER [ ':' ('int' | 'int8' | 'int16' | 'int32' | 'int64' | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64') ] (';' | ('{' IDENTIFIER ['=' EXPR] {',' IDENTIFIER ['=' EXPR]} '}'))
     struct Node_Enum final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Enum;
+
         struct Declaration
         {
             TokenView name;
             std::unique_ptr<Node_Expr> expr; // null = no value
         };
 
-        explicit Node_Enum(SourceSpan span = {}) : NodeBase(NodeKind::Enum, span) {}
+        explicit Node_Enum(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         EntityAttribute attr;
         TokenView identifier;
@@ -235,13 +253,15 @@ namespace light_angel
     // **BNF** CLASS ::= ['mixin'] {'shared' | 'abstract' | 'final' | 'external'} 'class' IDENTIFIER (';' | ([':' SCOPE IDENTIFIER {',' SCOPE IDENTIFIER}] '{' {VIRTUALPROP | FUNC | VAR | FUNCDEF} '}'))
     struct Node_Class final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Class;
+
         struct BaseSpecifier
         {
             std::unique_ptr<Node_Scope> scope;
             TokenView identifier;
         };
 
-        explicit Node_Class(SourceSpan span = {}) : NodeBase(NodeKind::Class, span) {}
+        explicit Node_Class(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         EntityAttribute attr;
         TokenView identifier;
@@ -253,7 +273,9 @@ namespace light_angel
     // **BNF** TYPEDEF ::= 'typedef' PRIMITIVETYPE IDENTIFIER ';'
     struct Node_TypeDef final : NodeBase
     {
-        explicit Node_TypeDef(SourceSpan span = {}) : NodeBase(NodeKind::TypeDef, span) {}
+        static constexpr NodeKind Kind = NodeKind::TypeDef;
+
+        explicit Node_TypeDef(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         TokenView primitiveType;
         TokenView identifier;
@@ -262,7 +284,9 @@ namespace light_angel
     // **BNF** FUNC ::= {'shared' | 'external'} ['private' | 'protected'] [((TYPE ['&']) | '~')] IDENTIFIER ['<' TYPE {',' TYPE} '>'] PARAMLIST [LISTPATTERN] ['const'] FUNCATTR (';' | STATBLOCK)
     struct Node_Func final : NodeBase
     {
-        explicit Node_Func(SourceSpan span = {}) : NodeBase(NodeKind::Func, span) {}
+        static constexpr NodeKind Kind = NodeKind::Func;
+
+        explicit Node_Func(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         EntityAttribute attr;
         std::optional<AccessModifier> access;
@@ -284,7 +308,9 @@ namespace light_angel
     // **BNF** LISTPATTERN ::= '{' LISTENTRY {',' LISTENTRY} '}'
     struct Node_ListPattern final : NodeBase
     {
-        explicit Node_ListPattern(SourceSpan span = {}) : NodeBase(NodeKind::ListPattern, span) {}
+        static constexpr NodeKind Kind = NodeKind::ListPattern;
+
+        explicit Node_ListPattern(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<std::unique_ptr<Node_ListEntry>> entries;
     };
@@ -292,31 +318,35 @@ namespace light_angel
     // **BNF** LISTENTRY ::= (('repeat' | 'repeat_same') (('{' LISTENTRY '}') | TYPE)) | (TYPE {',' TYPE})
     struct Node_ListEntry final : NodeBase
     {
-        enum class Kind
+        static constexpr NodeKind Kind = NodeKind::ListEntry;
+
+        enum class EntryKind
         {
             RepeatEntry, // 'repeat' | 'repeat_same' '{' LISTENTRY '}'
             RepeatType, // 'repeat' | 'repeat_same' TYPE
             TypeList, // TYPE {',' TYPE}
         };
 
-        explicit Node_ListEntry(SourceSpan span = {}) : NodeBase(NodeKind::ListEntry, span) {}
+        explicit Node_ListEntry(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
-        Kind entryKind = Kind::TypeList;
+        EntryKind entryKind = EntryKind::TypeList;
         bool isRepeatSame = false;
-        std::unique_ptr<Node_ListEntry> entry; // Kind::RepeatEntry
-        std::vector<std::unique_ptr<Node_Type>> types; // Kind::RepeatType / Kind::TypeList
+        std::unique_ptr<Node_ListEntry> entry; // EntryKind::RepeatEntry
+        std::vector<std::unique_ptr<Node_Type>> types; // EntryKind::RepeatType / EntryKind::TypeList
     };
 
     // **BNF** INTERFACE ::= {'external' | 'shared'} 'interface' IDENTIFIER (';' | ([':' SCOPE IDENTIFIER {',' SCOPE IDENTIFIER}] '{' {VIRTUALPROP | INTERFACEMETHOD} '}'))
     struct Node_Interface final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Interface;
+
         struct BaseSpecifier
         {
             std::unique_ptr<Node_Scope> scope;
             TokenView identifier;
         };
 
-        explicit Node_Interface(SourceSpan span = {}) : NodeBase(NodeKind::Interface, span) {}
+        explicit Node_Interface(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         EntityAttribute attr;
         TokenView identifier;
@@ -328,13 +358,15 @@ namespace light_angel
     // **BNF** VAR ::= ['private' | 'protected'] TYPE IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST] {',' IDENTIFIER [( '=' (INITLIST | ASSIGN)) | ARGLIST]} ';'
     struct Node_Var final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Var;
+
         struct Declaration
         {
             TokenView identifier;
             std::unique_ptr<NodeBase> init; // Node_InitList | Node_Assign | Node_ArgList | null
         };
 
-        explicit Node_Var(SourceSpan span = {}) : NodeBase(NodeKind::Var, span) {}
+        explicit Node_Var(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::optional<AccessModifier> access;
         std::unique_ptr<Node_Type> type;
@@ -344,7 +376,9 @@ namespace light_angel
     // **BNF** IMPORT ::= 'import' TYPE ['&'] IDENTIFIER PARAMLIST FUNCATTR 'from' STRING ';'
     struct Node_Import final : NodeBase
     {
-        explicit Node_Import(SourceSpan span = {}) : NodeBase(NodeKind::Import, span) {}
+        static constexpr NodeKind Kind = NodeKind::Import;
+
+        explicit Node_Import(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type;
         bool isRef = false;
@@ -357,7 +391,9 @@ namespace light_angel
     // **BNF** FUNCDEF ::= {'external' | 'shared'} 'funcdef' TYPE ['&'] IDENTIFIER PARAMLIST ';'
     struct Node_FuncDef final : NodeBase
     {
-        explicit Node_FuncDef(SourceSpan span = {}) : NodeBase(NodeKind::FuncDef, span) {}
+        static constexpr NodeKind Kind = NodeKind::FuncDef;
+
+        explicit Node_FuncDef(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         EntityAttribute attr;
         std::unique_ptr<Node_Type> returnType;
@@ -369,6 +405,8 @@ namespace light_angel
     // **BNF** VIRTUALPROP ::= ['private' | 'protected'] TYPE ['&'] IDENTIFIER '{' {('get' | 'set') ['const'] FUNCATTR (STATBLOCK | ';')} '}'
     struct Node_VirtualProp final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::VirtualProp;
+
         struct Accessor
         {
             bool isConst = false;
@@ -376,7 +414,7 @@ namespace light_angel
             std::unique_ptr<Node_StatBlock> body; // null = ';'
         };
 
-        explicit Node_VirtualProp(SourceSpan span = {}) : NodeBase(NodeKind::VirtualProp, span) {}
+        explicit Node_VirtualProp(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::optional<AccessModifier> access;
         std::unique_ptr<Node_Type> type;
@@ -389,7 +427,9 @@ namespace light_angel
     // **BNF** INTERFACEMETHOD ::= TYPE ['&'] IDENTIFIER PARAMLIST ['const'] FUNCATTR ';'
     struct Node_InterfaceMethod final : NodeBase
     {
-        explicit Node_InterfaceMethod(SourceSpan span = {}) : NodeBase(NodeKind::InterfaceMethod, span) {}
+        static constexpr NodeKind Kind = NodeKind::InterfaceMethod;
+
+        explicit Node_InterfaceMethod(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type;
         bool isRef = false;
@@ -402,7 +442,9 @@ namespace light_angel
     // **BNF** STATBLOCK ::= '{' {VAR | STATEMENT | USING} '}'
     struct Node_StatBlock final : NodeBase
     {
-        explicit Node_StatBlock(SourceSpan span = {}) : NodeBase(NodeKind::StatBlock, span) {}
+        static constexpr NodeKind Kind = NodeKind::StatBlock;
+
+        explicit Node_StatBlock(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<std::unique_ptr<NodeBase>> statements;
     };
@@ -410,7 +452,9 @@ namespace light_angel
     // **BNF** PARAMLIST ::= '(' ['void' | (PARAMETER {',' PARAMETER})] ')'
     struct Node_ParamList final : NodeBase
     {
-        explicit Node_ParamList(SourceSpan span = {}) : NodeBase(NodeKind::ParamList, span) {}
+        static constexpr NodeKind Kind = NodeKind::ParamList;
+
+        explicit Node_ParamList(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<std::unique_ptr<Node_Parameter>> params;
     };
@@ -418,7 +462,9 @@ namespace light_angel
     // **BNF** PARAMETER ::= TYPE TYPEMODIFIER [IDENTIFIER] ['...' | ('=' (EXPR | 'void'))]
     struct Node_Parameter final : NodeBase
     {
-        explicit Node_Parameter(SourceSpan span = {}) : NodeBase(NodeKind::Parameter, span) {}
+        static constexpr NodeKind Kind = NodeKind::Parameter;
+
+        explicit Node_Parameter(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type;
         TypeModifier typeModifier;
@@ -434,6 +480,8 @@ namespace light_angel
     // **BNF** TYPE ::= ['const'] SCOPE DATATYPE ['<' TYPE {',' TYPE} '>'] { ('[' ']') | ('@' ['const']) }
     struct Node_Type final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Type;
+
         enum class Postfix
         {
             Array, // '[' ']'
@@ -441,7 +489,7 @@ namespace light_angel
             ConstHandle // '@' 'const'
         };
 
-        explicit Node_Type(SourceSpan span = {}) : NodeBase(NodeKind::Type, span) {}
+        explicit Node_Type(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         bool isConst = false;
         std::unique_ptr<Node_Scope> scope;
@@ -453,7 +501,9 @@ namespace light_angel
     // **BNF** INITLIST ::= '{' [ASSIGN | INITLIST] {',' [ASSIGN | INITLIST]} '}'
     struct Node_InitList final : NodeBase
     {
-        explicit Node_InitList(SourceSpan span = {}) : NodeBase(NodeKind::InitList, span) {}
+        static constexpr NodeKind Kind = NodeKind::InitList;
+
+        explicit Node_InitList(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<std::unique_ptr<NodeBase>> items; // Node_Assign | Node_InitList
     };
@@ -461,7 +511,9 @@ namespace light_angel
     // **BNF** SCOPE ::= ['::'] {IDENTIFIER '::'} [IDENTIFIER ['<' TYPE {',' TYPE} '>'] '::']
     struct Node_Scope final : NodeBase
     {
-        explicit Node_Scope(SourceSpan span = {}) : NodeBase(NodeKind::Scope, span) {}
+        static constexpr NodeKind Kind = NodeKind::Scope;
+
+        explicit Node_Scope(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         bool isGlobal = false;
         std::vector<TokenView> identifiers; // includes the one before '::' if present
@@ -471,7 +523,9 @@ namespace light_angel
     // **BNF** DATATYPE ::= (IDENTIFIER | PRIMITIVETYPE | '?' | 'auto')
     struct Node_DataType final : NodeBase
     {
-        explicit Node_DataType(SourceSpan span = {}) : NodeBase(NodeKind::DataType, span) {}
+        static constexpr NodeKind Kind = NodeKind::DataType;
+
+        explicit Node_DataType(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         TokenView token;
     };
@@ -482,7 +536,9 @@ namespace light_angel
     // **BNF** STATEMENT ::= (IF | FOR | FOREACH | WHILE | RETURN | STATBLOCK | BREAK | CONTINUE | DOWHILE | SWITCH | EXPRSTAT | TRY)
     struct Node_Statement final : NodeBase
     {
-        explicit Node_Statement(SourceSpan span = {}) : NodeBase(NodeKind::Statement, span) {}
+        static constexpr NodeKind Kind = NodeKind::Statement;
+
+        explicit Node_Statement(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<NodeBase> child;
     };
@@ -490,7 +546,9 @@ namespace light_angel
     // **BNF** SWITCH ::= 'switch' '(' ASSIGN ')' '{' {CASE} '}'
     struct Node_Switch final : NodeBase
     {
-        explicit Node_Switch(SourceSpan span = {}) : NodeBase(NodeKind::Switch, span) {}
+        static constexpr NodeKind Kind = NodeKind::Switch;
+
+        explicit Node_Switch(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Assign> expr;
         std::vector<std::unique_ptr<Node_Case>> cases;
@@ -499,13 +557,17 @@ namespace light_angel
     // **BNF** BREAK ::= 'break' ';'
     struct Node_Break final : NodeBase
     {
-        explicit Node_Break(SourceSpan span = {}) : NodeBase(NodeKind::Break, span) {}
+        static constexpr NodeKind Kind = NodeKind::Break;
+
+        explicit Node_Break(SourceSpan span = {}) : NodeBase(Kind, span) {}
     };
 
     // **BNF** FOR ::= 'for' '(' (VAR | EXPRSTAT) EXPRSTAT [ASSIGN {',' ASSIGN}] ')' STATEMENT
     struct Node_For final : NodeBase
     {
-        explicit Node_For(SourceSpan span = {}) : NodeBase(NodeKind::For, span) {}
+        static constexpr NodeKind Kind = NodeKind::For;
+
+        explicit Node_For(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<NodeBase> initializer; // Node_Var or Node_ExprStat
         std::unique_ptr<Node_ExprStat> condition;
@@ -516,13 +578,15 @@ namespace light_angel
     // **BNF** FOREACH ::= 'foreach' '(' TYPE IDENTIFIER {',' TYPE IDENTIFIER} ':' ASSIGN ')' STATEMENT
     struct Node_ForEach final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::ForEach;
+
         struct VarDecl
         {
             std::unique_ptr<Node_Type> type;
             TokenView identifier;
         };
 
-        explicit Node_ForEach(SourceSpan span = {}) : NodeBase(NodeKind::ForEach, span) {}
+        explicit Node_ForEach(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<VarDecl> vars;
         std::unique_ptr<Node_Assign> range;
@@ -532,7 +596,9 @@ namespace light_angel
     // **BNF** WHILE ::= 'while' '(' ASSIGN ')' STATEMENT
     struct Node_While final : NodeBase
     {
-        explicit Node_While(SourceSpan span = {}) : NodeBase(NodeKind::While, span) {}
+        static constexpr NodeKind Kind = NodeKind::While;
+
+        explicit Node_While(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Assign> condition;
         std::unique_ptr<NodeBase> body;
@@ -541,7 +607,9 @@ namespace light_angel
     // **BNF** DOWHILE ::= 'do' STATEMENT 'while' '(' ASSIGN ')' ';'
     struct Node_DoWhile final : NodeBase
     {
-        explicit Node_DoWhile(SourceSpan span = {}) : NodeBase(NodeKind::DoWhile, span) {}
+        static constexpr NodeKind Kind = NodeKind::DoWhile;
+
+        explicit Node_DoWhile(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<NodeBase> body;
         std::unique_ptr<Node_Assign> condition;
@@ -550,7 +618,9 @@ namespace light_angel
     // **BNF** IF ::= 'if' '(' ASSIGN ')' STATEMENT ['else' STATEMENT]
     struct Node_If final : NodeBase
     {
-        explicit Node_If(SourceSpan span = {}) : NodeBase(NodeKind::If, span) {}
+        static constexpr NodeKind Kind = NodeKind::If;
+
+        explicit Node_If(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Assign> condition;
         std::unique_ptr<NodeBase> thenBranch;
@@ -560,13 +630,17 @@ namespace light_angel
     // **BNF** CONTINUE ::= 'continue' ';'
     struct Node_Continue final : NodeBase
     {
-        explicit Node_Continue(SourceSpan span = {}) : NodeBase(NodeKind::Continue, span) {}
+        static constexpr NodeKind Kind = NodeKind::Continue;
+
+        explicit Node_Continue(SourceSpan span = {}) : NodeBase(Kind, span) {}
     };
 
     // **BNF** EXPRSTAT ::= [ASSIGN] ';'
     struct Node_ExprStat final : NodeBase
     {
-        explicit Node_ExprStat(SourceSpan span = {}) : NodeBase(NodeKind::ExprStat, span) {}
+        static constexpr NodeKind Kind = NodeKind::ExprStat;
+
+        explicit Node_ExprStat(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Assign> assign; // null = empty statement
     };
@@ -574,7 +648,9 @@ namespace light_angel
     // **BNF** TRY ::= 'try' STATBLOCK 'catch' STATBLOCK
     struct Node_Try final : NodeBase
     {
-        explicit Node_Try(SourceSpan span = {}) : NodeBase(NodeKind::Try, span) {}
+        static constexpr NodeKind Kind = NodeKind::Try;
+
+        explicit Node_Try(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_StatBlock> tryBlock;
         std::unique_ptr<Node_StatBlock> catchBlock;
@@ -583,7 +659,9 @@ namespace light_angel
     // **BNF** RETURN ::= 'return' [ASSIGN] ';'
     struct Node_Return final : NodeBase
     {
-        explicit Node_Return(SourceSpan span = {}) : NodeBase(NodeKind::Return, span) {}
+        static constexpr NodeKind Kind = NodeKind::Return;
+
+        explicit Node_Return(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Assign> value; // null = void return
     };
@@ -591,7 +669,9 @@ namespace light_angel
     // **BNF** CASE ::= (('case' EXPR) | 'default') ':' {STATEMENT}
     struct Node_Case final : NodeBase
     {
-        explicit Node_Case(SourceSpan span = {}) : NodeBase(NodeKind::Case, span) {}
+        static constexpr NodeKind Kind = NodeKind::Case;
+
+        explicit Node_Case(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Expr> expr; // null = default
         std::vector<std::unique_ptr<NodeBase>> statements;
@@ -600,13 +680,15 @@ namespace light_angel
     // **BNF** EXPR ::= EXPRTERM {EXPROP EXPRTERM}
     struct Node_Expr final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::Expr;
+
         struct OpTerm
         {
             TokenView op; // MATHOP | COMPOP | LOGICOP | BITOP
             std::unique_ptr<Node_ExprTerm> term;
         };
 
-        explicit Node_Expr(SourceSpan span = {}) : NodeBase(NodeKind::Expr, span) {}
+        explicit Node_Expr(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_ExprTerm> first;
         std::vector<OpTerm> rest;
@@ -615,13 +697,15 @@ namespace light_angel
     // **BNF** EXPRTERM ::= ([TYPE '='] INITLIST) | ({EXPRPREOP} EXPRVALUE {EXPRPOSTOP})
     struct Node_ExprTerm final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::ExprTerm;
+
         enum class Form
         {
             InitListForm, // [TYPE '='] INITLIST
             ExprValueForm, // {EXPRPREOP} EXPRVALUE {EXPRPOSTOP}
         };
 
-        explicit Node_ExprTerm(SourceSpan span = {}) : NodeBase(NodeKind::ExprTerm, span) {}
+        explicit Node_ExprTerm(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         Form form = Form::ExprValueForm;
 
@@ -636,7 +720,9 @@ namespace light_angel
     // **BNF** EXPRVALUE ::= CONSTRUCTORCALL | FUNCCALL | VARACCESS | CAST | LITERAL | '(' ASSIGN ')' | LAMBDA
     struct Node_ExprValue final : NodeBase
     {
-        explicit Node_ExprValue(SourceSpan span = {}) : NodeBase(NodeKind::ExprValue, span) {}
+        static constexpr NodeKind Kind = NodeKind::ExprValue;
+
+        explicit Node_ExprValue(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<NodeBase> value;
     };
@@ -644,7 +730,9 @@ namespace light_angel
     // **BNF** CONSTRUCTORCALL ::= TYPE ARGLIST
     struct Node_ConstructorCall final : NodeBase
     {
-        explicit Node_ConstructorCall(SourceSpan span = {}) : NodeBase(NodeKind::ConstructorCall, span) {}
+        static constexpr NodeKind Kind = NodeKind::ConstructorCall;
+
+        explicit Node_ConstructorCall(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type;
         std::unique_ptr<Node_ArgList> args;
@@ -656,7 +744,9 @@ namespace light_angel
     // **BNF** EXPRPOSTOP ::= ('.' (FUNCCALL | IDENTIFIER)) | ('[' [IDENTIFIER ':'] ASSIGN {',' [IDENTIFIER ':'] ASSIGN} ']') | ARGLIST | '++' | '--'
     struct Node_ExprPostOp final : NodeBase
     {
-        enum class Kind
+        static constexpr NodeKind Kind = NodeKind::ExprPostOp;
+
+        enum class OpKind
         {
             Member, // '.' (FUNCCALL | IDENTIFIER)
             Subscript, // '[' ... ']'
@@ -671,19 +761,21 @@ namespace light_angel
             std::unique_ptr<Node_Assign> value;
         };
 
-        explicit Node_ExprPostOp(SourceSpan span = {}) : NodeBase(NodeKind::ExprPostOp, span) {}
+        explicit Node_ExprPostOp(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
-        Kind opKind = Kind::Member;
+        OpKind opKind = OpKind::Member;
         std::unique_ptr<NodeBase> memberAccess;
         TokenView dotIdentifier;
-        std::vector<SubscriptArg> subscriptArgs; // Kind::Subscript
-        std::unique_ptr<Node_ArgList> callArgs; // Kind::Call
+        std::vector<SubscriptArg> subscriptArgs; // OpKind::Subscript
+        std::unique_ptr<Node_ArgList> callArgs; // OpKind::Call
     };
 
     // **BNF** CAST ::= 'cast' '<' TYPE '>' '(' ASSIGN ')'
     struct Node_Cast final : NodeBase
     {
-        explicit Node_Cast(SourceSpan span = {}) : NodeBase(NodeKind::Cast, span) {}
+        static constexpr NodeKind Kind = NodeKind::Cast;
+
+        explicit Node_Cast(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type;
         std::unique_ptr<Node_Assign> expr;
@@ -692,7 +784,9 @@ namespace light_angel
     // **BNF** LAMBDA ::= 'function' '(' [LAMBDAPARAM {',' LAMBDAPARAM}] ')' STATBLOCK
     struct Node_Lambda final : NodeBase
     {
-        explicit Node_Lambda(SourceSpan span = {}) : NodeBase(NodeKind::Lambda, span) {}
+        static constexpr NodeKind Kind = NodeKind::Lambda;
+
+        explicit Node_Lambda(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<std::unique_ptr<Node_LambdaParam>> params;
         std::unique_ptr<Node_StatBlock> body;
@@ -701,7 +795,9 @@ namespace light_angel
     // **BNF** LAMBDAPARAM ::= [TYPE TYPEMODIFIER] [IDENTIFIER]
     struct Node_LambdaParam final : NodeBase
     {
-        explicit Node_LambdaParam(SourceSpan span = {}) : NodeBase(NodeKind::LambdaParam, span) {}
+        static constexpr NodeKind Kind = NodeKind::LambdaParam;
+
+        explicit Node_LambdaParam(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Type> type; // null = type omitted
         TypeModifier typeModifier;
@@ -711,7 +807,9 @@ namespace light_angel
     // **BNF** LITERAL ::= NUMBER | STRING | BITS | 'true' | 'false' | 'null' | 'void'
     struct Node_Literal final : NodeBase
     {
-        explicit Node_Literal(SourceSpan span = {}) : NodeBase(NodeKind::Literal, span) {}
+        static constexpr NodeKind Kind = NodeKind::Literal;
+
+        explicit Node_Literal(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         TokenView token;
     };
@@ -719,7 +817,9 @@ namespace light_angel
     // **BNF** FUNCCALL ::= SCOPE IDENTIFIER ['<' TYPE {',' TYPE} '>'] ARGLIST
     struct Node_FuncCall final : NodeBase
     {
-        explicit Node_FuncCall(SourceSpan span = {}) : NodeBase(NodeKind::FuncCall, span) {}
+        static constexpr NodeKind Kind = NodeKind::FuncCall;
+
+        explicit Node_FuncCall(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Scope> scope;
         TokenView identifier;
@@ -730,7 +830,9 @@ namespace light_angel
     // **BNF** VARACCESS ::= SCOPE IDENTIFIER
     struct Node_VarAccess final : NodeBase
     {
-        explicit Node_VarAccess(SourceSpan span = {}) : NodeBase(NodeKind::VarAccess, span) {}
+        static constexpr NodeKind Kind = NodeKind::VarAccess;
+
+        explicit Node_VarAccess(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Scope> scope;
         TokenView identifier;
@@ -739,13 +841,15 @@ namespace light_angel
     // **BNF** ARGLIST ::= '(' [IDENTIFIER ':'] ASSIGN {',' [IDENTIFIER ':'] ASSIGN} ')'
     struct Node_ArgList final : NodeBase
     {
+        static constexpr NodeKind Kind = NodeKind::ArgList;
+
         struct Arg
         {
             TokenView name; // empty = positional argument
             std::unique_ptr<Node_Assign> value;
         };
 
-        explicit Node_ArgList(SourceSpan span = {}) : NodeBase(NodeKind::ArgList, span) {}
+        explicit Node_ArgList(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::vector<Arg> args;
     };
@@ -753,7 +857,9 @@ namespace light_angel
     // **BNF** ASSIGN ::= CONDITION [ ASSIGNOP ASSIGN ]
     struct Node_Assign final : NodeBase
     {
-        explicit Node_Assign(SourceSpan span = {}) : NodeBase(NodeKind::Assign, span) {}
+        static constexpr NodeKind Kind = NodeKind::Assign;
+
+        explicit Node_Assign(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Condition> condition;
         TokenView op; // empty = no operator
@@ -763,7 +869,9 @@ namespace light_angel
     // **BNF** CONDITION ::= EXPR ['?' ASSIGN ':' ASSIGN]
     struct Node_Condition final : NodeBase
     {
-        explicit Node_Condition(SourceSpan span = {}) : NodeBase(NodeKind::Condition, span) {}
+        static constexpr NodeKind Kind = NodeKind::Condition;
+
+        explicit Node_Condition(SourceSpan span = {}) : NodeBase(Kind, span) {}
 
         std::unique_ptr<Node_Expr> expr;
         std::unique_ptr<Node_Assign> thenExpr; // null = no ternary
