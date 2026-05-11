@@ -291,7 +291,7 @@ namespace light_angel
         EntityAttribute attr;
         std::optional<AccessModifier> access;
         bool isDestructor = false;
-        std::unique_ptr<Node_Type> returnType; // null = destructor
+        std::unique_ptr<Node_Type> returnType; // null = constructor or destructor
         bool isReturnRef = false;
         TokenView identifier;
         std::vector<std::unique_ptr<Node_Type>> templateParams;
